@@ -124,8 +124,6 @@ FRETE_MINIMO=60
 2) **Upload de Acordos (XLSX)** → leitura priorizando **Reservado LUFT - Bases** (ou demais abas com `Origem/Destino/Valor/Tratamento`), geração de **`Tipo_Serviço`**, renomeações e limpeza para export.  
 3) **Download** do Excel processado e **Dashboards** com filtros.
 
-> Em produção: persistir resultados em banco (PostgreSQL, por exemplo) e registrar logs estruturados.
-
 ---
 
 ## 🧯 Troubleshooting (erros comuns)
@@ -170,3 +168,4 @@ FRETE_MINIMO=60
 ---
 
 > **Créditos**: Equipe LUFT e usuários internos pelo feedback; comunidade open-source (Flask, Pandas, pdfplumber, Camelot, etc.).
+
