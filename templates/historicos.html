@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Histórico de Faturas — Uploads & Outputs{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4" data-aos="fade-down">
+  <h1 class="page-title mb-0">Histórico de Arquivos</h1>
+</div>
+
+<div class="card" data-aos="fade-up">
+  <div class="card-body p-4">
+    <ul class="nav nav-pills mb-3" id="histTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="uploads-tab" data-bs-toggle="pill" data-bs-target="#uploads-pane" type="button" role="tab">Uploads</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="outputs-tab" data-bs-toggle="pill" data-bs-target="#outputs-pane" type="button" role="tab">Outputs</button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="uploads-pane" role="tabpanel">
+        <div class="table-wrapper">
+          <table id="tbl-uploads" class="table table-striped table-hover align-middle" style="width:100%">
+            <thead>
+              <tr><th>Arquivo</th><th>Tamanho (MB)</th><th>Modificado em</th><th>Ação</th></tr>
+            </thead>
+            <tbody>
+              {% for f in uploads %}
+              <tr>
+                <td><code>{{ f.name }}</code></td>
+                <td>{{ "%.2f"|format(f.size_mb) }}</td>
+                <td>{{ f.mtime_local }}</td>
+                <td><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('hist.download_upload', filename=f.name) }}">Baixar</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="outputs-pane" role="tabpanel">
+        <div class="table-wrapper">
+          <table id="tbl-outputs" class="table table-striped table-hover align-middle" style="width:100%">
+            <thead>
+              <tr><th>Arquivo</th><th>Tamanho (MB)</th><th>Modificado em</th><th>Ação</th></tr>
+            </thead>
+            <tbody>
+              {% for f in outputs %}
+              <tr>
+                <td><code>{{ f.name }}</code></td>
+                <td>{{ "%.2f"|format(f.size_mb) }}</td>
+                <td>{{ f.mtime_local }}</td>
+                <td><a class="btn btn-sm btn-dark" href="{{ url_for('hist.download_output', filename=f.name) }}">Baixar</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function initDT(id){
+    if (window.jQuery && jQuery.fn && jQuery.fn.dataTable){
+      jQuery(id).DataTable({
+        responsive: true, paging: true, pageLength: 10, lengthMenu: [10,25,50,100],
+        dom: '<"row mb-2"<"col-md-6"l><"col-md-6 text-md-end"f>>t<"row mt-2"<"col-md-6"i><"col-md-6"p>>',
+        language: { url: 'https://cdn.datatables.net/plug-ins/2.0.7/i18n/pt-BR.json' },
+        order: [[2,'desc']]
+      });
+    }
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{ initDT('#tbl-uploads'); initDT('#tbl-outputs'); });
+</script>
+{% endblock %}

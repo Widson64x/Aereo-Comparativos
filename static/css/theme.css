@@ -1,0 +1,44 @@
+/* static/css/theme.css */
+:root {
+  --brand-color: #111827;
+  --text-color: #1f2937;
+  --text-muted: #6b7280;
+  --text-inverse: #ffffff;
+
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7fafc;
+
+  --border-color: #e5e7eb;
+
+  --alert-warning-bg: #fffbe6;
+  --alert-warning-border: #ffe58f;
+  --alert-warning-text: #92400e;
+
+  --table-header-bg: #f3f4f6;
+  --table-header-text: #111827;
+
+  --shadow-1: 0 8px 24px rgba(17,24,39,0.08);
+  --shadow-2: 0 12px 36px rgba(17,24,39,0.12);
+}
+
+[data-bs-theme="dark"] {
+  --brand-color: #f8fafc;
+  --text-color: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-inverse: #111827;
+
+  --bg-primary: #0f172a;
+  --bg-secondary: #0b1223;
+
+  --border-color: #1f2a44;
+
+  --alert-warning-bg: #332a00;
+  --alert-warning-border: #665400;
+  --alert-warning-text: #ffe58f;
+
+  --table-header-bg: #101a33;
+  --table-header-text: #f8fafc;
+
+  --shadow-1: 0 8px 24px rgba(0,0,0,0.25);
+  --shadow-2: 0 12px 36px rgba(0,0,0,0.35);
+}

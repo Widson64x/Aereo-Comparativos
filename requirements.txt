@@ -1,0 +1,21 @@
+Flask==3.1.1
+pandas==2.3.1
+numpy==2.2.6
+openpyxl==3.1.5
+pyarrow==21.0.0
+pdfplumber==0.11.7
+pdfminer.six==20250506
+Pillow==11.3.0
+
+# Opcional: só se quiser manter o fallback do Camelot
+camelot-py==1.0.9
+opencv-python-headless==4.12.0.88
+
+# Windows/zoneinfo
+tzdata==2025.2
+
+# Excel com engine xlsxwriter (você usa)
+XlsxWriter==3.2.0
+
+watchdog==6.0.0
+

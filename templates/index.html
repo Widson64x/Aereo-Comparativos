@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Análises Aéreo — Início{% endblock %}
+
+{% block content %}
+<section class="card hero-card border-0 shadow-sm p-4 p-lg-5" data-aos="fade-up">
+  <div class="row align-items-center">
+    <div class="col-lg-7">
+      <h1 class="display-5 fw-bold mb-3">Análises Aéreas</h1>
+      <p class="lead text-secondary mb-4">
+        Consolide faturas, compare tabelas e encontre divergências com precisão.
+        Comece pela <strong>Fatura Comparativo</strong> para transformar PDFs em análises.
+      </p>
+      <div class="d-flex gap-3">
+        <a href="{{ url_for('fatura.tool_home') }}" class="btn btn-dark btn-lg">Abrir Fatura Comparativo</a>
+        <a href="{{ url_for('formatador_acordos.index') }}" class="btn btn-outline-secondary btn-lg">Padronizador</a>
+      </div>
+    </div>
+    <div class="col-lg-5 mt-4 mt-lg-0">
+      <div class="glass-container p-4">
+        <h6 class="text-uppercase text-muted mb-3">Atalhos</h6>
+        <div class="row g-3">
+          <div class="col-12">
+            <a href="{{ url_for('fatura.tool_home') }}" class="tool-tile d-flex align-items-center p-3">
+              <div class="tool-icon me-3">📄</div>
+              <div>
+                <div class="fw-semibold">Fatura Comparativo</div>
+                <small class="text-secondary">Extraia do PDF e compare com as tabelas</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-12">
+            <a href="{{ url_for('hist.faturas_home') }}" class="tool-tile d-flex align-items-center p-3">
+              <div class="tool-icon me-3">🗂️</div>
+              <div>
+                <div class="fw-semibold">Histórico</div>
+                <small class="text-secondary">Baixe uploads e outputs</small>
+              </div>
+            </a>
+          </div>
+          <div class="col-12">
+            <a href="{{ url_for('formatador_acordos.index') }}" class="tool-tile d-flex align-items-center p-3">
+              <div class="tool-icon me-3">🧩</div>
+              <div>
+                <div class="fw-semibold">Padronizador de Tabelas</div>
+                <small class="text-secondary">Padronize os Tabelas e exporte CSV/XLSX</small>
+              </div>
+            </a>
+          </div>
+        </div>
+        <div class="mt-3 small text-muted">Dica: <kbd>Ctrl</kbd> + <kbd>K</kbd> abre a paleta de comandos.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mt-4" data-aos="fade-up" data-aos-delay="100">
+  <div class="row g-4">
+    <div class="col-6 col-lg-3">
+      <div class="metric-card text-center">
+        <h6>Ferramentas</h6>
+        <div class="val" data-count-to="3">3</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="metric-card text-center">
+        <h6>Status</h6>
+        <div class="val">Online</div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="metric-card text-center">
+        <h6>Última atualização</h6>
+        <div class="val">
+          {{ last_update.strftime('%d/%m/%Y %H:%M') if last_update else 'N/A' }}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
