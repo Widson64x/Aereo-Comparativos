@@ -36,7 +36,9 @@ def compare_fretes(df_base: pd.DataFrame, acordos_xlsx_path: str, cfg: AppConfig
                 acordos_xlsx_path, cfg.services.RESERVADO_CODE, cfg.services.RESERVADO_CODE
             )
             if not df_est_res.empty:
-                aux = _comparar_bloco(df_res[falt_mask].copy(), df_est_res, cfg.tuning.TOLERANCIA_PCT_DEFAULT)
+                # Alinha o índice do mask com o df_res
+                falt_mask_aligned = falt_mask.reindex(df_res.index, fill_value=False)
+                aux = _comparar_bloco(df_res[falt_mask_aligned].copy(), df_est_res, cfg.tuning.TOLERANCIA_PCT_DEFAULT)
                 for c in ["Frete_Acordo","Diferenca","Dif_abs","Dif_%","Status","Fonte_Tarifa","Observacao"]:
                     bloco1.loc[falt_mask, c] = aux[c].values
         results.append(bloco1)
@@ -110,7 +112,7 @@ def _comparar_bloco(df_pdf_bloco: pd.DataFrame, df_acordos_tidy: pd.DataFrame, t
         df_final.loc[minimo_mask, ["Diferenca", "Dif_abs", "Dif_%"]] = np.nan
         df_final.loc[minimo_mask, "Status"] = "Frete Mínimo"
         df_final.loc[minimo_mask, "Observacao"] = "Frete mínimo aplicado (Vlr Frete ≤ 60)."
-
+        
     colunas_principais = [
         "Tipo_Serviço","Origem","Destino","Data","Documento","Vlr Frete",
         "Frete_Peso","Frete_Acordo","Diferenca","Dif_abs","Dif_%","Status","Fonte_Tarifa",
