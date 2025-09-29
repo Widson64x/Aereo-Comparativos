@@ -32,6 +32,11 @@
 </head>
 <body>
 
+  <!-- Expor prefixo no front -->
+  <script>
+    window.BASE_PREFIX = "{{ BASE_PREFIX|default('/aereo-comparativos') }}";
+  </script>
+
   <!-- Navbar -->
   <header>
     <nav class="navbar navbar-expand-lg border-bottom fixed-top glass-nav">
@@ -55,10 +60,22 @@
 
         <div class="collapse navbar-collapse" id="topNav">
           <ul class="navbar-nav ms-auto">
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('main.index') }}">Início</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('fatura.tool_home') }}">Fatura Comparativo</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('formatador_acordos.index') }}">Padronizador</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('hist.faturas_home') }}">Histórico</a></li>
+            <li class="nav-item">
+              <a class="nav-link {{ 'active' if request.endpoint == 'main.index' else '' }}"
+                 href="{{ url_for('main.index') }}">Início</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ 'active' if request.endpoint == 'fatura.tool_home' else '' }}"
+                 href="{{ url_for('fatura.tool_home') }}">Fatura Comparativo</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ 'active' if request.endpoint == 'formatador_acordos.index' else '' }}"
+                 href="{{ url_for('formatador_acordos.index') }}">Padronizador</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {{ 'active' if request.endpoint == 'hist.faturas_home' else '' }}"
+                 href="{{ url_for('hist.faturas_home') }}">Histórico</a>
+            </li>
           </ul>
         </div>
       </div>
@@ -100,15 +117,13 @@
         <strong><a href="{{ url_for('main.index') }}" class="text-decoration-none text-muted">Análises Aéreo</a></strong>
         &copy; {{ now().year }}
       </small>
-      <small class="text-muted">
-        Feito com Flask, Bootstrap & DataTables
-      </small>
+      <small class="text-muted">Feito com Flask, Bootstrap & DataTables</small>
     </div>
   </footer>
 
   <!-- Scripts base -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- DataTables -->
   <script src="https://cdn.datatables.net/2.0.7/js/dataTables.js"></script>
@@ -132,6 +147,43 @@
 
   <!-- App JS -->
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+  <!-- Inicialização básica + palette/tema -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Libs
+      if (window.AOS) AOS.init({ once: true });
+      if (window.tippy) tippy('[data-tippy-content]', { theme: 'light' });
+
+      // Command palette
+      const cmdk = document.getElementById('cmdk');
+      const input = document.getElementById('cmdk-input');
+      const list  = document.getElementById('cmdk-list');
+      const openPalette = () => { cmdk.classList.remove('d-none'); input.focus(); };
+      const closePalette = () => { cmdk.classList.add('d-none'); input.value=''; };
+      document.getElementById('cmdk-btn').addEventListener('click', openPalette);
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(); }
+        if (e.key === 'Escape') closePalette();
+      });
+      list.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-href]');
+        if (!btn) return;
+        window.location.href = btn.dataset.href;
+      });
+      cmdk.addEventListener('click', (e) => { if (e.target === cmdk) closePalette(); });
+
+      // Tema
+      const toggleBtn = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+      toggleBtn.addEventListener('click', () => {
+        const isDark = html.getAttribute('data-bs-theme') === 'dark';
+        html.setAttribute('data-bs-theme', isDark ? 'light' : 'dark');
+        document.querySelector('#theme-toggle .icon-sun').classList.toggle('d-none', !isDark);
+        document.querySelector('#theme-toggle .icon-moon').classList.toggle('d-none', isDark);
+      });
+    });
+  </script>
 
   {% block scripts %}{% endblock %}
 </body>

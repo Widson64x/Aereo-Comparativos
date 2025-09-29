@@ -79,17 +79,17 @@
       </div>
     </div>
 
-    <!-- % Fora da Tolerância -->
-    <div class="col-12 col-md-6 col-lg-3">
-      <div class="metric-card text-center"
-           data-bs-toggle="tooltip"
-           data-bs-placement="top"
-           title="Proporção de linhas 'Fora da tolerância' sobre o total de linhas consideradas ('Dentro' + 'Fora').">
-        <h6 class="mb-1">% Fora da Tolerância</h6>
-        <small class="text-muted d-block mb-2"></small>
-        <div id="mForaPct" class="val">—</div>
-      </div>
+  <!-- % Diferença (Cobrado − Acordado) -->
+  <div class="col-12 col-md-6 col-lg-3">
+    <div class="metric-card text-center"
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
+        title="Diferença percentual: ((Cobrado — Tarifado − Acordado — Simulado) ÷ (Acordado — Simulado)) × 100. Considera apenas linhas 'Dentro' ou 'Fora'.">
+      <h6 class="mb-1">% Diferença (Cobrado − Acordado)</h6>
+      <small class="text-muted d-block mb-2"></small>
+      <div id="mForaPct" class="val">—</div>
     </div>
+  </div>
 
   </div>
 
@@ -187,7 +187,6 @@
 
     const rows = getCell.rows(); // array de índices (DT) ou TRs (plain)
     let totalCobradoTarifado=0, totalCobradoGeral=0, totalSimulado=0;
-    let dentro=0, fora=0;
 
     rows.forEach(r=>{
       const vFretePeso = idxFretePeso  >=0 ? toNum(getCell.value(r, idxFretePeso))   : NaN;
@@ -205,25 +204,30 @@
 
       // >>> SOMENTE DENTRO/FORA <<<
       if(ehConsiderado){
-        // Total Cobrado (Vlr Frete) = Frete_Peso × Peso_Taxado (sem fallback)
+        // Cobrado — Tarifado = Frete_Peso × Peso_Taxado (sem fallback)
         if(Number.isFinite(produto)) totalCobradoTarifado += produto;
 
-        // Simulação do Acordado = Frete_Acordo × Peso_Taxado
+        // Acordado — Simulado = Frete_Acordo × Peso_Taxado
         if(Number.isFinite(vAcordoKg) && Number.isFinite(vPeso)){
           totalSimulado += vAcordoKg * vPeso;
         }
-
-        if(isDentroTol(statusTxt)) dentro++;
-        else if(isForaTol(statusTxt)) fora++;
       }
     });
 
-    const considerados = dentro + fora;
-    const foraPct = considerados ? (fora/considerados)*100 : NaN;
     const totalDiferenca = (Number.isFinite(totalCobradoTarifado)&&Number.isFinite(totalSimulado))
       ? (totalCobradoTarifado - totalSimulado) : NaN;
 
-    return { totalCobradoTarifado, totalCobradoGeral, totalSimulado, totalDiferenca, foraPct };
+    // % Diferença = (Diferença / Simulado) × 100
+    let pctDiff = NaN;
+    if (Number.isFinite(totalDiferenca)) {
+      if (totalSimulado === 0) {
+        pctDiff = (totalDiferenca === 0) ? 0 : NaN; // evita divisão por zero
+      } else {
+        pctDiff = (totalDiferenca / totalSimulado) * 100;
+      }
+    }
+
+    return { totalCobradoTarifado, totalCobradoGeral, totalSimulado, totalDiferenca, pctDiff };
   }
 
   // =========================
@@ -240,7 +244,7 @@
     setText('mCobradoGeral', fmtMoney(agg.totalCobradoGeral));     // todas as linhas
     setText('mSimulado',     fmtMoney(agg.totalSimulado));         // só Dentro/Fora
     setText('mDiferenca',    fmtMoney(agg.totalDiferenca));        // só Dentro/Fora
-    setText('mForaPct',      fmtPct(agg.foraPct));                 // só Dentro/Fora
+    setText('mForaPct',      fmtPct(agg.pctDiff)); 
   }
 
   // =========================
@@ -261,7 +265,7 @@
     setText('mCobradoGeral', fmtMoney(agg.totalCobradoGeral));     // todas as linhas
     setText('mSimulado',     fmtMoney(agg.totalSimulado));         // só Dentro/Fora
     setText('mDiferenca',    fmtMoney(agg.totalDiferenca));        // só Dentro/Fora
-    setText('mForaPct',      fmtPct(agg.foraPct));                 // só Dentro/Fora
+    setText('mForaPct',      fmtPct(agg.pctDiff));  
   }
 
   // =========================
