@@ -1,4 +1,4 @@
-# formats/column_maps.py
+# Formats/column_maps.py
 # Mapeia nomes variados de colunas para o padrão
 COLUMN_MAP = {
     # origem

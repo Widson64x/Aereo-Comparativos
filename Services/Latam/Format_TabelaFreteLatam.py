@@ -1,4 +1,4 @@
-# services/freight_normalizer.py
+# Services/freight_normalizer.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -33,7 +33,7 @@ COLUMN_MAP = {
 }
 
 # Conjunto canônico de serviços
-from services.service_types import normalize_tipo_servico, ALLOWED  # novo import
+from Services.Latam.TiposServicos import normalize_tipo_servico, ALLOWED  # novo import
 
 
 # -----------------------

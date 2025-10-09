@@ -1,4 +1,4 @@
-# repositories/freight_agreements_repository.py
+# Repositories/Repositorio_TabelasFretes.py
 from __future__ import annotations
 
 import re
@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 import pandas as pd
 import numpy as np
 
-from utils.parse import to_num, std_text, normalize_label, tokens, strip_accents
+from Utils.Parse import to_num, std_text, normalize_label, tokens, strip_accents
 
 # ======== CONSTANTES / PADRÕES EXISTENTES ========
 ORIGEM_PAT   = r"^\s*origem\s*$"
@@ -195,9 +195,9 @@ def processar_abas_estacoes_por_codigos(xlsx_path: str,
     return pd.concat(frames, ignore_index=True).drop_duplicates(subset=["Origem","Destino"], keep="last").reset_index(drop=True)
 
 # ==================== NOVO: Padronizador UNIFICADO ====================
-# Integra com services/freight_normalizer.py sem quebrar o que já existe acima.
+# Integra com Services/freight_normalizer.py sem quebrar o que já existe acima.
 try:
-    from services.freight_normalizer import normalize_file as _normalize_file, save_outputs as _save_outputs
+    from Services.Latam.Format_TabelaFreteLatam import normalize_file as _normalize_file, save_outputs as _save_outputs
 except Exception as _e_import:
     _normalize_file = None
     _save_outputs = None
@@ -211,7 +211,7 @@ def normalizar_acordos(xlsx_path: str | Path, ignore_first_sheet: bool = False) 
        Fonte_Arquivo, Fonte_Aba]
     """
     if _normalize_file is None:
-        raise ImportError("services.freight_normalizer não disponível. Verifique a instalação/import.")
+        raise ImportError("Services.freight_normalizer não disponível. Verifique a instalação/import.")
     return _normalize_file(Path(xlsx_path), ignore_first_sheet=ignore_first_sheet)
 
 def salvar_normalizados(df: pd.DataFrame, outputs_dir: str | Path = "outputs",
@@ -221,7 +221,7 @@ def salvar_normalizados(df: pd.DataFrame, outputs_dir: str | Path = "outputs",
     Retorna (parquet_path, csv_path).
     """
     if _save_outputs is None:
-        raise ImportError("services.freight_normalizer.save_outputs não disponível.")
+        raise ImportError("Services.freight_normalizer.save_outputs não disponível.")
     return _save_outputs(df, outputs_dir=outputs_dir, basename=basename)
 
 def normalizar_e_salvar(xlsx_path: str | Path,
@@ -259,7 +259,7 @@ OUTPUTS_DIR = BASE_OUTPUTS / "acordos"
 
 # Importa o serviço de normalização
 try:
-    from services.freight_normalizer import normalize_file as _normalize_file, save_outputs as _save_outputs
+    from Services.Latam.Format_TabelaFreteLatam import normalize_file as _normalize_file, save_outputs as _save_outputs
 except Exception as _e_import:
     _normalize_file = None
     _save_outputs = None
@@ -314,7 +314,7 @@ def normalize_and_persist(xlsx_path: str | Path, ignore_first_sheet: bool = Fals
     Retorna (DataFrame, NormalizedArtifact).
     """
     if _normalize_file is None or _save_outputs is None:
-        raise ImportError("services.freight_normalizer não disponível. Verifique imports.")
+        raise ImportError("Services.freight_normalizer não disponível. Verifique imports.")
     _ensure_dirs()
 
     xlsx_path = Path(xlsx_path)

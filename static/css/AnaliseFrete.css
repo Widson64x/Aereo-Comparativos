@@ -1,0 +1,278 @@
+/* static/css/AnaliseFrete.css */
+
+/* ===== Layout Principal ===== */
+.analysis-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem; /* Aumenta o espaçamento entre seções */
+}
+
+/* ===== Cabeçalho da Página ===== */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(var(--border-glass-rgb), 0.1);
+    animation: fadeInDown 0.6s ease-out;
+}
+.page-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+}
+.page-subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+.stepper {
+    display: flex;
+    gap: 1rem;
+    background: rgba(var(--bg-glass-rgb), 0.4);
+    padding: 0.5rem 1rem;
+    border-radius: 99px;
+    border: 1px solid rgba(var(--border-glass-rgb), 0.1);
+}
+.step {
+    color: var(--text-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.step span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(var(--border-glass-rgb), 0.1);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.step.active {
+    color: var(--text-color);
+}
+.step.active span {
+    background-color: var(--brand-primary);
+    color: var(--text-inverse);
+}
+
+
+/* ===== Cartão e Seção de Upload ===== */
+section.card {
+    background: rgba(var(--bg-glass-rgb), 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--border-glass-rgb), 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border-radius: 1.25rem;
+}
+.dropzone-area {
+    border: 2px dashed rgba(var(--border-glass-rgb), 0.3);
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    background: rgba(var(--border-glass-rgb), 0.1);
+    cursor: pointer;
+    transition: all .3s ease;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+.dropzone-area:hover, .dropzone-area.dragover {
+    border-color: var(--brand-primary);
+    background: rgba(var(--bs-primary-rgb), 0.05);
+    color: var(--text-color);
+}
+.dropzone-icon {
+    font-size: 3rem;
+    color: var(--brand-primary);
+    margin-bottom: 1rem;
+}
+.dropzone-text strong {
+    display: block;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+.dropzone-text span {
+    font-size: 0.9rem;
+}
+.file-name-display {
+    margin-top: 1rem;
+    font-weight: 500;
+    color: var(--brand-primary);
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+.dropzone-area.has-file .dropzone-text { display: none; }
+
+
+/* ===== Botões ===== */
+.btn-primary {
+    background-color: var(--brand-primary);
+    color: var(--text-inverse);
+    border: none;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    transition: all .2s ease;
+}
+.btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(var(--bs-primary-rgb), 0.2);
+}
+.download-box {
+    background: rgba(var(--border-glass-rgb), 0.1);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    height: 100%;
+}
+
+/* ===== Seções de Métricas (KPIs) ===== */
+.kpi-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(var(--border-glass-rgb), 0.1);
+}
+.kpi-header i { font-size: 1.25rem; }
+.kpi-header h5 {
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+.metric-card {
+    background: rgba(var(--bg-glass-rgb), 0.3);
+    border: 1px solid rgba(var(--border-glass-rgb), 0.1);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s ease;
+}
+.metric-card:hover {
+    background: rgba(var(--bg-glass-rgb), 0.5);
+    border-color: rgba(var(--border-glass-rgb), 0.2);
+    transform: translateY(-5px);
+}
+.metric-icon { font-size: 2.5rem; }
+.metric-content h6 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+.metric-content .val {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--text-color);
+    font-feature-settings: "tnum"; /* Alinhamento tabular para números */
+    line-height: 1.2;
+}
+.metric-card .val.text-danger { color: #ef4444 !important; }
+.metric-card .val.text-success { color: #22c55e !important; }
+
+/* KPI Cards pequenos */
+.metric-card-small {
+    background: rgba(var(--bg-glass-rgb), 0.3);
+    border: 1px solid rgba(var(--border-glass-rgb), 0.1);
+    padding: 1rem 1.5rem;
+    border-radius: 1rem;
+    height: 100%;
+}
+.metric-card-small h6 {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+.metric-card-small .val {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+/* ===== Seção da Tabela de Resultados ===== */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+#table-wrap { min-width: 100%; }
+.empty-state {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-muted);
+}
+.empty-state i { font-size: 4rem; margin-bottom: 1rem; }
+#result-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--text-muted);
+    /* A MÁGICA PARA O ALINHAMENTO PERFEITO */
+    table-layout: fixed;
+}
+#result-table thead th {
+    background-color: rgba(var(--border-glass-rgb), 0.1);
+    color: var(--text-color);
+    font-weight: 600;
+    padding: 0.9rem 1rem;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap; /* Impede quebra de linha no cabeçalho */
+}
+#result-table tbody td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid rgba(var(--border-glass-rgb), 0.1);
+    /* CONTROLE DE CONTEÚDO EXCEDENTE */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#result-table.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(var(--border-glass-rgb), 0.05);
+}
+#result-table.table-hover tbody tr:hover {
+    background-color: rgba(var(--border-glass-rgb), 0.15);
+    color: var(--text-color);
+}
+
+/* ===== Estilos para Controles do DataTables ===== */
+.dt-search input,
+.dt-length select {
+    background-color: rgba(var(--border-glass-rgb), 0.1) !important;
+    border: 1px solid rgba(var(--border-glass-rgb), 0.2) !important;
+    color: var(--text-color) !important;
+    border-radius: 0.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+}
+.dt-search input:focus, .dt-length select:focus {
+    box-shadow: 0 0 0 2px var(--brand-primary) !important;
+}
+.toolbar .dt-buttons .btn {
+    margin: 0 0.25rem;
+    transition: all 0.2s ease;
+}
+.toolbar .dt-buttons .btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--text-muted) !important;
+    color: var(--text-color) !important;
+}
+
+/* Animações */
+@keyframes fadeInDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}

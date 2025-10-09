@@ -4,128 +4,101 @@
   <meta charset="utf-8" />
   <title>{% block title %}Análises Aéreo{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#111827" />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
 
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-
-  <!-- DataTables -->
   <link href="https://cdn.datatables.net/2.0.7/css/dataTables.bootstrap5.css" rel="stylesheet"/>
   <link href="https://cdn.datatables.net/buttons/3.1.2/css/buttons.bootstrap5.css" rel="stylesheet"/>
   <link href="https://cdn.datatables.net/responsive/3.0.3/css/responsive.bootstrap5.css" rel="stylesheet"/>
-
-  <!-- AOS (animate on scroll) -->
   <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
-
-  <!-- Tippy (tooltips melhores) -->
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light.css"/>
 
-  <!-- App styles -->
   <link href="{{ url_for('static', filename='css/theme.css') }}" rel="stylesheet" />
   <link href="{{ url_for('static', filename='css/base.css') }}" rel="stylesheet" />
 
   {% block head_extra %}{% endblock %}
 </head>
 <body>
-
-  <!-- Expor prefixo no front -->
   <script>
     window.BASE_PREFIX = "{{ BASE_PREFIX|default('/aereo-comparativos') }}";
   </script>
 
-  <!-- Navbar -->
-  <header>
-    <nav class="navbar navbar-expand-lg border-bottom fixed-top glass-nav">
-      <div class="container">
-        <a class="navbar-brand" href="{{ url_for('main.index') }}">
+  <div class="app-wrapper">
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <a class="sidebar-brand" href="{{ url_for('main.index') }}">
           <span class="brand-dot"></span> Análises Aéreo
         </a>
+      </div>
 
-        <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-icon" id="cmdk-btn" data-tippy-content="Atalhos (Ctrl + K)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 12h12M12 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-          <button class="btn btn-icon" id="theme-toggle" data-tippy-content="Alternar tema">
+      <nav class="sidebar-nav">
+        <a class="sidebar-nav-link {{ 'active' if request.endpoint == 'main.index' else '' }}" href="{{ url_for('main.index') }}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5"/></svg>
+          <span>Início</span>
+        </a>
+        <a class="sidebar-nav-link {{ 'active' if request.endpoint == 'fatura.tool_home' else '' }}" href="{{ url_for('fatura.tool_home') }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/></svg>
+            <span>Fatura Comparativo</span>
+        </a>
+        <a class="sidebar-nav-link {{ 'active' if request.endpoint == 'formatador_acordos.index' else '' }}" href="{{ url_for('formatador_acordos.index') }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M7.752.066a.5.5 0 0 1 .496 0l3.75 2.143a.5.5 0 0 1 .252.434v3.995l3.498 2A.5.5 0 0 1 16 9.07v1.86a.5.5 0 0 1-.252.434l-3.75 2.143a.5.5 0 0 1-.496 0l-3.502-2-3.502 2.001a.5.5 0 0 1-.496 0l-3.75-2.143A.5.5 0 0 1 0 10.93V9.07a.5.5 0 0 1 .252-.434l3.498-2V2.643a.5.5 0 0 1 .252-.434zM4.25 12.306l2.997-1.714 2.998 1.714 3.25-1.857V9.07l-3.5-2-3.5 2v3.236zm-3.5-2 3.5 2V6.867l-3.5-2v3.236zm11.5 0v-3.236l-3.5 2v3.236zM8 5.763l2.997-1.714L8 2.333 5.003 4.05 8 5.763zM4.25 4.05l2.997 1.714L8 7.48l-2.997-1.714L4.25 4.05z"/></svg>
+          <span>Padronizador</span>
+        </a>
+        <a class="sidebar-nav-link {{ 'active' if request.endpoint == 'hist.faturas_home' else '' }}" href="{{ url_for('hist.faturas_home') }}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 2A1.5 1.5 0 0 0 5 3.5v9A1.5 1.5 0 0 0 6.5 14h3a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 9.5 2zM5 3.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m.5 2.5a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm-4-2.5a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z"/></svg>
+          <span>Histórico</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-icon" id="cmdk-btn" data-tippy-content="Atalhos (Ctrl + K)" aria-label="Abrir paleta de comandos">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M9.5 3.5a1.5 1.5 0 0 1-3 0V2a.5.5 0 0 1 1 0v1.5a.5.5 0 0 0 1 0V2a.5.5 0 0 1 1 0zm.5 10.5a.5.5 0 0 1-1 0V13a.5.5 0 0 0-1 0v1.5a.5.5 0 0 1-1 0V13a1.5 1.5 0 0 1 3 0zm-5-5a.5.5 0 0 1-1 0V8a.5.5 0 0 0-1 0v.5a.5.5 0 0 1-1 0V8a1.5 1.5 0 0 1 3 0zm10-1.5a.5.5 0 0 0-1 0V8a.5.5 0 0 1-1 0V6.5a.5.5 0 0 0-1 0V8a1.5 1.5 0 0 0 3 0zM3 3.5a1.5 1.5 0 0 1-3 0V2a.5.5 0 0 1 1 0v1.5a.5.5 0 0 0 1 0V2a.5.5 0 0 1 1 0z"/></svg>
+        </button>
+        <button class="btn btn-icon" id="theme-toggle" data-tippy-content="Alternar tema" aria-label="Alternar tema claro e escuro">
             <span class="icon-sun"></span>
             <span class="icon-moon d-none"></span>
-          </button>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNav">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-        </div>
-
-        <div class="collapse navbar-collapse" id="topNav">
-          <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
-              <a class="nav-link {{ 'active' if request.endpoint == 'main.index' else '' }}"
-                 href="{{ url_for('main.index') }}">Início</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ 'active' if request.endpoint == 'fatura.tool_home' else '' }}"
-                 href="{{ url_for('fatura.tool_home') }}">Fatura Comparativo</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ 'active' if request.endpoint == 'formatador_acordos.index' else '' }}"
-                 href="{{ url_for('formatador_acordos.index') }}">Padronizador</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link {{ 'active' if request.endpoint == 'hist.faturas_home' else '' }}"
-                 href="{{ url_for('hist.faturas_home') }}">Histórico</a>
-            </li>
-          </ul>
-        </div>
+        </button>
       </div>
-    </nav>
-  </header>
+    </aside>
 
-  <!-- Toasts -->
+    <main class="main-content">
+      <div class="container-fluid">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category or 'info' }} alert-dismissible fade show" role="alert" data-aos="fade-down" data-aos-duration="400">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
   <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-area"></div>
 
-  <!-- Command Palette -->
   <div class="cmdk-backdrop d-none" id="cmdk">
-    <div class="cmdk-modal">
-      <input id="cmdk-input" class="cmdk-input" placeholder="Busque ações… (ex: Padronizador, fatura, histórico)" autocomplete="off" />
+    <div class="cmdk-modal" data-aos="fade-down" data-aos-duration="300">
+      <input id="cmdk-input" class="cmdk-input" placeholder="Busque por uma ferramenta ou ação..." autocomplete="off" />
       <div class="cmdk-list" id="cmdk-list">
-        <button data-href="{{ url_for('fatura.tool_home') }}"><b>Fatura Comparativo</b> — processar fatura em PDF</button>
-        <button data-href="{{ url_for('formatador_acordos.index') }}"><b>Padronizador de Tabelas</b> — padronizar planilhas</button>
-        <button data-href="{{ url_for('hist.faturas_home') }}"><b>Histórico</b> — uploads & outputs</button>
-        <button data-href="{{ url_for('main.index') }}"><b>Início</b> — visão geral</button>
+        <button data-href="{{ url_for('fatura.tool_home') }}"><b>Fatura Comparativo</b> — Processar fatura em PDF</button>
+        <button data-href="{{ url_for('formatador_acordos.index') }}"><b>Padronizador de Tabelas</b> — Padronizar planilhas de acordos</button>
+        <button data-href="{{ url_for('hist.faturas_home') }}"><b>Histórico</b> — Consultar uploads e resultados</button>
+        <button data-href="{{ url_for('main.index') }}"><b>Início</b> — Voltar para a página inicial</button>
       </div>
-      <div class="cmdk-hint"><kbd>↑</kbd><kbd>↓</kbd> navegar • <kbd>Enter</kbd> abrir • <kbd>Esc</kbd> fechar</div>
+      <div class="cmdk-hint"><kbd>↑</kbd><kbd>↓</kbd> para navegar • <kbd>Enter</kbd> para abrir • <kbd>Esc</kbd> para fechar</div>
     </div>
   </div>
 
-  <main class="container app-container">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <div class="alert alert-warning mt-3" data-aos="fade-down" data-aos-duration="400">
-          {% for msg in messages %}<div>{{ msg }}</div>{% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
-  </main>
-
-  <footer class="app-footer">
-    <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center">
-      <small class="text-muted mb-2 mb-sm-0">
-        <strong><a href="{{ url_for('main.index') }}" class="text-decoration-none text-muted">Análises Aéreo</a></strong>
-        &copy; {{ now().year }}
-      </small>
-      <small class="text-muted">Feito com Flask, Bootstrap & DataTables</small>
-    </div>
-  </footer>
-
-  <!-- Scripts base -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- DataTables -->
   <script src="https://cdn.datatables.net/2.0.7/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.0.7/js/dataTables.bootstrap5.js"></script>
   <script src="https://cdn.datatables.net/buttons/3.1.2/js/dataTables.buttons.js"></script>
@@ -134,56 +107,12 @@
   <script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.js"></script>
   <script src="https://cdn.datatables.net/responsive/3.0.3/js/responsive.bootstrap5.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
-  <!-- AOS -->
   <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-
-  <!-- Tippy -->
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
-
-  <!-- GSAP (microanimações) -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-  <!-- App JS -->
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
-  <!-- Inicialização básica + palette/tema -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Libs
-      if (window.AOS) AOS.init({ once: true });
-      if (window.tippy) tippy('[data-tippy-content]', { theme: 'light' });
-
-      // Command palette
-      const cmdk = document.getElementById('cmdk');
-      const input = document.getElementById('cmdk-input');
-      const list  = document.getElementById('cmdk-list');
-      const openPalette = () => { cmdk.classList.remove('d-none'); input.focus(); };
-      const closePalette = () => { cmdk.classList.add('d-none'); input.value=''; };
-      document.getElementById('cmdk-btn').addEventListener('click', openPalette);
-      document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(); }
-        if (e.key === 'Escape') closePalette();
-      });
-      list.addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-href]');
-        if (!btn) return;
-        window.location.href = btn.dataset.href;
-      });
-      cmdk.addEventListener('click', (e) => { if (e.target === cmdk) closePalette(); });
-
-      // Tema
-      const toggleBtn = document.getElementById('theme-toggle');
-      const html = document.documentElement;
-      toggleBtn.addEventListener('click', () => {
-        const isDark = html.getAttribute('data-bs-theme') === 'dark';
-        html.setAttribute('data-bs-theme', isDark ? 'light' : 'dark');
-        document.querySelector('#theme-toggle .icon-sun').classList.toggle('d-none', !isDark);
-        document.querySelector('#theme-toggle .icon-moon').classList.toggle('d-none', isDark);
-      });
-    });
-  </script>
 
   {% block scripts %}{% endblock %}
 </body>

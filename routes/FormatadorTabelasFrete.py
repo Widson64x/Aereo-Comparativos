@@ -1,11 +1,11 @@
-# routes/formatador_acordos.py
+# routes/FormatadorTabelasFrete.py
 from __future__ import annotations
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for, send_from_directory
 from pathlib import Path
 import pandas as pd
 
-from repositories.freight_agreements_repository import (
+from Repositories.Repositorio_TabelasFretes import (
     save_uploaded_xlsx,
     normalize_and_persist,
     preview,
@@ -51,7 +51,7 @@ def index():
             download_xlsx_url = url_for(".download_output", filename=Path(xlsx_path).name) if xlsx_path.exists() else None
 
             return render_template(
-                "formatador_index.html",
+                "Tools/ProcessarTabelaFrete.html",
                 table_html=table_html,
                 rows=len(df),
                 preview_count=len(prv["rows"]),
@@ -62,7 +62,7 @@ def index():
             flash(f"Erro ao normalizar: {e}", "danger")
 
     # GET ou erro
-    return render_template("formatador_index.html", table_html=None)
+    return render_template("Tools/ProcessarTabelaFrete.html", table_html=None)
 
 @bp.route("/download/<path:filename>")
 def download_output(filename: str):

@@ -8,9 +8,9 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, render_template, current_app, send_file, abort, request
 
-from config import AppConfig
+from Config import Appconfig
 
-bp = Blueprint("hist", __name__, template_folder="../templates", url_prefix="/historico")
+bp = Blueprint("hist", __name__, template_folder="../Templates", url_prefix="/historico")
 
 TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -43,11 +43,11 @@ def _list_dir(dirpath: Path) -> list[FileRow]:
 
 @bp.get("/faturas")
 def faturas_home():
-    app_cfg: AppConfig = current_app.config["APP_CFG"]
+    app_cfg: Appconfig = current_app.config["APP_CFG"]
     paths = app_cfg.paths
     uploads = _list_dir(paths.UPLOAD_DIR)
     outputs = _list_dir(paths.OUTPUT_DIR)
-    return render_template("historicos.html", uploads=uploads, outputs=outputs)
+    return render_template("CentralArquivos.html", uploads=uploads, outputs=outputs)
 
 def _safe_lookup(base: Path, filename: str) -> Path | None:
     # evita path traversal
@@ -60,7 +60,7 @@ def _safe_lookup(base: Path, filename: str) -> Path | None:
 
 @bp.get("/download/uploads/<path:filename>")
 def download_upload(filename: str):
-    app_cfg: AppConfig = current_app.config["APP_CFG"]
+    app_cfg: Appconfig = current_app.config["APP_CFG"]
     paths = app_cfg.paths
     p = _safe_lookup(paths.UPLOAD_DIR, filename)
     if not p:
@@ -69,7 +69,7 @@ def download_upload(filename: str):
 
 @bp.get("/download/outputs/<path:filename>")
 def download_output(filename: str):
-    app_cfg: AppConfig = current_app.config["APP_CFG"]
+    app_cfg: Appconfig = current_app.config["APP_CFG"]
     paths = app_cfg.paths
     p = _safe_lookup(paths.OUTPUT_DIR, filename)
     if not p:

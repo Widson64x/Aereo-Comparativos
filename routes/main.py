@@ -9,4 +9,4 @@ bp = Blueprint("main", __name__)
 @bp.route("/", methods=["GET"])
 def index():
     tz = ZoneInfo("America/Sao_Paulo")
-    return render_template("index.html", last_update=datetime.now(tz))
+    return render_template("Index.html", last_update=datetime.now(tz))

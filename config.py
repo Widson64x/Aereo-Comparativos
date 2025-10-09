@@ -20,14 +20,14 @@ class Columns:
     ])
 
 @dataclass(frozen=True)
-class ServicesConfig:
+class Servicesconfig:
     # Ordem importa (mais específico primeiro)
     VALID_CODES_ST2: List[str] = field(default_factory=lambda: ["ST2MD", "MD/PE", "MEDICAMENTOS", "MD"])
     RESERVADO_CODE: str = "RESMD"
     ESTANDAR_CODE: str = "ST2MD"  # mapeamos ESTANDAR → ST2MD p/ lookup
 
 @dataclass(frozen=True)
-class IOConfig:
+class IOconfig:
     ALLOWED_PDF_EXTS: List[str] = field(default_factory=lambda: [".pdf"])
     ALLOWED_EXCEL_EXTS: List[str] = field(default_factory=lambda: [".xlsx"])
 
@@ -37,9 +37,9 @@ class Tuning:
     EPSILON: float = 1e-9                 # zera ruído float tipo 1.776e-15
 
 @dataclass(frozen=True)
-class AppConfig:
+class Appconfig:
     paths: Paths
     cols: Columns = Columns()
-    services: ServicesConfig = ServicesConfig()
-    io: IOConfig = IOConfig()
+    Services: Servicesconfig = Servicesconfig()
+    io: IOconfig = IOconfig()
     tuning: Tuning = Tuning()

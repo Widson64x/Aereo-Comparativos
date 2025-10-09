@@ -1,0 +1,153 @@
+{% extends "Base.html" %}
+{% block title %}Fatura Comparativo — Início{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-4" data-aos="fade-down">
+  <h1 class="page-title mb-0">Fatura Comparativo</h1>
+</div>
+
+<div class="card" data-aos="fade-up">
+  <div class="card-body p-4">
+    <h5 class="card-title mb-3">Selecione o ponto de partida</h5>
+
+    <ul class="steps mb-4">
+      <li class="done">Upload dos PDFs</li>
+      <li>Pré-processamento</li>
+      <li>Comparativo</li>
+    </ul>
+
+    <div class="mb-4" id="step-options">
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="flow-option" id="option-new-pdf" value="new" checked>
+        <label class="form-check-label" for="option-new-pdf"><strong>1. Enviar novos PDFs (várias faturas)</strong></label>
+      </div>
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="radio" name="flow-option" id="option-existing-pdf" value="existing" {% if not recent_files %}disabled{% endif %}>
+        <label class="form-check-label" for="option-existing-pdf"><strong>2. Usar PDFs do histórico (múltiplos)</strong></label>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('fatura.process_pdfs') }}" enctype="multipart/form-data" id="form-new-pdf" data-aos="fade-up" data-no-auto-submit>
+      <p>Envie uma ou várias faturas em PDF. Cada PDF é processado independentemente e será consolidado em um único arquivo final.</p>
+      
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-8">
+          <label for="company_select_new" class="form-label fw-bold">Companhia Aérea</label>
+          <select class="form-select" name="company" id="company_select_new" required>
+            <option value="LATAM" selected>LATAM</option>
+            <option value="GOL">GOL</option>
+            <option value="AZUL">AZUL</option>
+            </select>
+        </div>
+      </div>
+      
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-8">
+          <label class="form-label fw-bold">Arquivos PDF</label>
+          <input class="form-control" type="file" name="pdf_files" accept=".pdf" multiple required />
+          <div class="form-text">
+            Limite: até <strong>{{ limits.max_files }}</strong> arquivos por envio, <strong>{{ limits.max_mb }} MB</strong> por arquivo.
+          </div>
+        </div>
+        <div class="col-12 col-md-4 d-grid">
+          <button class="btn btn-dark btn-lg" type="submit">Processar PDFs</button>
+        </div>
+      </div>
+    </form>
+
+    <form method="post" action="{{ url_for('fatura.use_existing_pdfs') }}" id="form-existing-pdf" class="d-none" data-aos="fade-up">
+      <p>Selecione a companhia e depois um ou mais PDFs já enviados para consolidar diretamente.</p>
+      {% if recent_files %}
+      
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-8">
+            <label for="company_select_existing" class="form-label fw-bold">Companhia Aérea</label>
+            <select class="form-select" name="company" id="company_select_existing" required>
+                <option value="LATAM" selected>LATAM</option>
+                <option value="GOL">GOL</option>
+                <option value="AZUL">AZUL</option>
+                </select>
+        </div>
+      </div>
+
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-8">
+          <label for="existing_pdf_select" class="form-label fw-bold">PDFs Recentes (Filtrados por Companhia)</label>
+          <select class="form-select" name="existing_pdfs" id="existing_pdf_select" multiple size="12" required>
+            {% for file in recent_files %}
+              <option value="{{ file }}">{{ file }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Use Ctrl/Shift para múltipla seleção.</div>
+        </div>
+        <div class="col-12 col-md-4 d-grid">
+          <button class="btn btn-dark btn-lg" type="submit">Usar Selecionados</button>
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-secondary">
+        Nenhum PDF encontrado no histórico. Envie novos PDFs para começar.
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // --- Lógica para alternar entre formulário NOVO e EXISTENTE ---
+  const optionNew = document.getElementById('option-new-pdf');
+  const optionExisting = document.getElementById('option-existing-pdf');
+  const formNew = document.getElementById('form-new-pdf');
+  const formExisting = document.getElementById('form-existing-pdf');
+
+  function toggleForms() {
+    if (optionNew.checked) {
+      formNew.classList.remove('d-none');
+      formExisting.classList.add('d-none');
+    } else {
+      formNew.classList.add('d-none');
+      formExisting.classList.remove('d-none');
+    }
+  }
+  optionNew?.addEventListener('change', toggleForms);
+  optionExisting?.addEventListener('change', toggleForms);
+  toggleForms(); // Executa na inicialização
+
+  // --- LÓGICA DE FILTRAGEM DINÂMICA DE PDFs EXISTENTES (NOVO) ---
+  const companySelector = document.getElementById('company_select_existing');
+  const pdfList = document.getElementById('existing_pdf_select');
+
+  function filterPdfList() {
+    if (!companySelector || !pdfList) return;
+
+    const selectedCompany = companySelector.value.toUpperCase();
+    const searchString = `_${selectedCompany}_`; // Ex: Procura por '_LATAM_' no nome do arquivo
+    let hasVisibleOptions = false;
+
+    // Desseleciona todos os itens para evitar enviar um item oculto
+    Array.from(pdfList.options).forEach(opt => opt.selected = false);
+
+    Array.from(pdfList.options).forEach(option => {
+      // Usamos includes() para verificar se o nome da companhia está no nome do arquivo
+      if (option.value.toUpperCase().includes(searchString)) {
+        option.style.display = ''; // Mostra o item
+        hasVisibleOptions = true;
+      } else {
+        option.style.display = 'none'; // Oculta o item
+      }
+    });
+    
+    // Se não houver opções para a companhia selecionada, pode-se mostrar uma mensagem (opcional)
+  }
+
+  // Adiciona o evento 'change' ao seletor de companhia
+  companySelector?.addEventListener('change', filterPdfList);
+  
+  // Executa o filtro uma vez ao carregar a página
+  filterPdfList();
+});
+</script>
+{% endblock %}

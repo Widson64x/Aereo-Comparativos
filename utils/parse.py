@@ -1,11 +1,12 @@
-# utils/parse.py
 from __future__ import annotations
 import re, unicodedata
 from datetime import date, datetime
 from typing import List
 import numpy as np
 import pandas as pd
+import re
 
+# Funções de normalização e parsing de textos e numéricos, e códigos de serviços
 def to_num(val):
     """Números pt-BR/US e datas acidentais → float (ex.: 13/08/2025 → 13.8)."""
     if isinstance(val, (int, float, np.number)) and not pd.isna(val):
@@ -45,3 +46,32 @@ def normalize_label(s: str) -> str:
 def tokens(s: str | None) -> List[str]:
     t = strip_accents(str(s or "")).upper()
     return re.findall(r"[A-Z0-9]+", t)
+
+
+def _norm_service_text(s: str | None) -> str:
+    t = strip_accents(std_text(s))
+    t = re.sub(r"[^A-Z0-9]+", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+def service_code_from_tipo(tipo: str | None) -> str | None:
+    """
+    - VELOZ MEDS         -> RESMD
+    - RESERVADO MEDS     -> RESMD
+    - ESTANDAR 2 MEDS    -> ST2MD
+    - ESTANDAR 10 BASICO -> ST2MD
+    - ESTANDAR 2 BASICO  -> ST2MD
+    """
+    t = _norm_service_text(tipo)
+    if not t: return None
+    
+    # MODIFICATION: Added 'VELOZ' to the list of keywords for the 'RESMD' code.
+    # Now it checks for 'RESERVADO', 'RES', or 'VELOZ' along with 'MEDS'.
+    if (re.search(r"\b(RES(ERVADO)?|VELOZ)\b", t) and "MED" in t) or "RESMD" in t:
+        return "RESMD"
+        
+    has_est = re.search(r"\b(ESTANDAR|EST|STD)\b", t) is not None
+    if has_est and re.search(r"\b2\b", t) and "MED" in t: return "ST2MD"
+    if has_est and re.search(r"\b10\b", t) and ("BAS" in t or "BASIC" in t): return "ST2MD"
+    if has_est and re.search(r"\b2\b", t) and ("BAS" in t or "BASIC" in t):  return "ST2MD"
+    
+    return None

@@ -1,0 +1,469 @@
+{% extends "Base.html" %}
+{% block title %}Análises Aéreo — Comparativo{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="{{ url_for('static', filename='css/AnaliseFrete.css') }}" rel="stylesheet" />
+{% endblock %}
+
+{% block content %}
+<div class="analysis-page-container">
+    <div class="page-header" data-aos="fade-down">
+        <div>
+            <h1 class="page-title">Análise Comparativa de Fatura</h1>
+            <p class="page-subtitle">Faça o upload da planilha de tabelas para comparar com os dados da fatura.</p>
+        </div>
+        <div class="stepper">
+            <div class="step"><span>1</span> Importar Fatura</div>
+            <div class="step active"><span>2</span> Comparar Tabelas</div>
+        </div>
+    </div>
+
+    <section class="card upload-section" data-aos="fade-up">
+        <div class="card-body p-4">
+            <form id="upload-form" method="post" enctype="multipart/form-data" class="row g-3 align-items-center">
+                <div class="col-lg-6">
+                    <label for="acordos_file_input" class="dropzone-area">
+                        <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+                        <div class="dropzone-text">
+                            <strong>Arraste e solte a planilha de Tabelas aqui</strong>
+                            <span>ou clique para selecionar o arquivo (.xlsx)</span>
+                        </div>
+                        <span id="file-name-display" class="file-name-display"></span>
+                    </label>
+                    <input class="form-control" type="file" name="acordos_file" id="acordos_file_input" accept=".xlsx" required hidden />
+                </div>
+
+                <div class="col-lg-3">
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="bi bi-bar-chart-line-fill me-2"></i>Comparar Agora
+                    </button>
+                </div>
+
+                {% if download_url %}
+                <div class="col-lg-3">
+                    <div class="download-box">
+                        <div class="btn-group w-100">
+                            <a class="btn btn-success" data-dl="server" data-basehref="{{ download_url }}" href="{{ download_url }}" download>
+                                <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Baixar XLSX
+                            </a>
+                            <a class="btn btn-outline-success" data-dl="server" data-basehref="{{ download_url }}?format=csv" href="{{ download_url }}?format=csv" download>
+                                CSV
+                            </a>
+                        </div>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" id="zerosSwitch">
+                            <label class="form-check-label" for="zerosSwitch">Exportar nulos como 0</label>
+                        </div>
+                        <small class="text-muted d-block mt-1 text-center">Batch: {{ batch_id }}</small>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </section>
+
+    <div data-aos="fade-up" data-aos-delay="100">
+        <div class="kpi-header">
+            <i class="bi bi-globe2 text-secondary"></i>
+            <h5>Visão Geral</h5>
+        </div>
+        <div class="row g-4">
+            <div class="col-12 col-md-6">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de (Frete_Peso × Peso Taxado) ou Vlr Frete para TODAS as linhas da prévia.">
+                    <div class="metric-icon" style="color: #8b5cf6;"><i class="bi bi-cash-stack"></i></div>
+                    <div class="metric-content">
+                        <h6>Valor Total Cobrado (Geral)</h6>
+                        <div id="mCobradoGeral" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre o 'Valor Total Cobrado (Geral)' e o 'Cobrado — Tarifado'. Representa valores de devolução, frete mínimo e tarifas não localizadas.">
+                    <div class="metric-icon" style="color: #f97316;"><i class="bi bi-search"></i></div>
+                    <div class="metric-content">
+                        <h6>Valores a Verificar</h6>
+                        <div id="mValoresAVerificar" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="kpi-header mt-4">
+            <i class="bi bi-check-circle-fill text-primary"></i>
+            <h5>Simulados (Linhas Tarifadas)</h5>
+        </div>
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de (Frete_Peso × Peso Taxado) apenas em linhas com status 'Dentro' ou 'Fora' da tolerância.">
+                    <div class="metric-icon" style="color: #3b82f6;"><i class="bi bi-file-earmark-text"></i></div>
+                    <div class="metric-content">
+                        <h6>Cobrado — Tarifado</h6>
+                        <div id="mCobrado" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Frete_Tabela (valor da tabela) nas linhas com status 'Dentro' ou 'Fora'.">
+                    <div class="metric-icon" style="color: #16a34a;"><i class="bi bi-file-earmark-ruled"></i></div>
+                    <div class="metric-content">
+                        <h6>Acordado — Simulado</h6>
+                        <div id="mSimulado" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre 'Cobrado — Tarifado' e 'Acordado — Simulado'.">
+                    <div class="metric-icon" style="color: #ef4444;"><i class="bi bi-graph-down-arrow"></i></div>
+                    <div class="metric-content">
+                        <h6>Diferença</h6>
+                        <div id="mDiferenca" class="val text-danger">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Variação percentual da diferença em relação ao valor acordado.">
+                    <div class="metric-icon" style="color: #eab308;"><i class="bi bi-percent"></i></div>
+                    <div class="metric-content">
+                        <h6>% Diferença</h6>
+                        <div id="mForaPct" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="kpi-header mt-4">
+            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+            <h5>Valores Verificados</h5>
+        </div>
+        <div class="row g-4">
+            <div class="col-12 col-md-4">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado das linhas com Status = 'Tarifa Não Localizada'.">
+                    <div class="metric-icon" style="color: #64748b;"><i class="bi bi-file-earmark-x"></i></div>
+                    <div class="metric-content">
+                        <h6>Cobrado sem Tarifa</h6>
+                        <div id="mCobradoSemTarifa" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado nas linhas com Status = 'Devolução'.">
+                    <div class="metric-icon" style="color: #14b8a6;"><i class="bi bi-arrow-return-left"></i></div>
+                    <div class="metric-content">
+                        <h6>Valor de Devolução</h6>
+                        <div id="mDevValor" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado nas linhas com Status = 'Frete Mínimo' valores que o frete foi < 60.">
+                    <div class="metric-icon" style="color: #d946ef;"><i class="bi bi-shield-check"></i></div>
+                    <div class="metric-content">
+                        <h6>Frete Mínimo</h6>
+                        <div id="mFreteMinimo" class="val">—</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="card data-table-section" data-aos="fade-up" data-aos-delay="200">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">Prévia do Resultado ({{ rows|default(0) }} linhas)</h5>
+                <div class="toolbar"></div>
+            </div>
+            <div class="table-wrapper">
+                <div id="table-wrap">
+                    {% if table_html %}
+                        {{ table_html|safe }}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-table"></i>
+                            <p>A tabela de resultados aparecerá aqui após o processamento.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar Tooltips do Bootstrap
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el, { container: 'body' }));
+
+    // ===== Lógica da Dropzone =====
+    const form = document.getElementById('upload-form');
+    const fileInput = document.getElementById('acordos_file_input');
+    const dropzoneArea = document.querySelector('.dropzone-area');
+    const fileNameDisplay = document.getElementById('file-name-display');
+
+    if (dropzoneArea) {
+        dropzoneArea.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+                dropzoneArea.classList.add('has-file');
+            }
+        });
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzoneArea.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzoneArea.addEventListener(eventName, () => dropzoneArea.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzoneArea.addEventListener(eventName, () => dropzoneArea.classList.remove('dragover'), false);
+        });
+
+        dropzoneArea.addEventListener('drop', e => {
+            fileInput.files = e.dataTransfer.files;
+            const changeEvent = new Event('change');
+            fileInput.dispatchEvent(changeEvent);
+        }, false);
+    }
+});
+</script>
+
+<script>
+ // ===== Utils =====
+ function stripAccents(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+ function normText(s){return stripAccents(s).trim().toLowerCase();}
+ function toNum(raw){
+   if(raw===undefined||raw===null)return NaN;
+   let s=String(raw).trim();
+   if(s===''||s==='-'||s==='—')return NaN;
+   s=s.replace(/\s/g,'').replace(/R\$/gi,'');
+   const hasComma=s.includes(','), hasDot=s.includes('.');
+   if(hasComma&&hasDot){
+     const lastComma=s.lastIndexOf(','), lastDot=s.lastIndexOf('.');
+     const decSep=(lastComma>lastDot)?',':'.', thouSep=(decSep===',')?'.':',';
+     s=s.split(thouSep).join('');
+     if(decSep===',') s=s.replace(',', '.');
+   } else if (hasComma){
+     s=s.replace(/\./g,''); s=s.replace(',', '.');
+   } else {
+     s=s.replace(/,/g,'');
+   }
+   const v=Number(s); return Number.isFinite(v)?v:NaN;
+ }
+ const fmtMoney=(n)=>Number.isFinite(n)?'R$ ' + n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+ const fmtPct=(n)=>Number.isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'%':'—';
+ const setText=(id, txt)=>{ const el=document.getElementById(id); if(el) el.textContent=txt; };
+
+ // ===== Tabela =====
+ const wrap=document.getElementById('table-wrap');
+ const tbl=wrap?wrap.querySelector('table'):null;
+ if(tbl){tbl.id='result-table'; tbl.classList.add('table','table-striped','table-hover','align-middle');}
+
+ function headerIndex(name){
+   const ths=document.querySelectorAll('#result-table thead th');
+   const target=(name||'').toLowerCase();
+   for(let i=0;i<ths.length;i++){ if(ths[i].textContent.trim().toLowerCase()===target) return i; }
+   return -1;
+ }
+ function pickIdx(cands){ for(const c of cands){ const i=headerIndex(c); if(i>=0)return i; } return -1; }
+
+ // ===== Status helpers =====
+ const isDentroTol =(t)=> normText(t) === 'dentro da tolerancia';
+ const isForaTol   =(t)=> normText(t) === 'fora da tolerancia';
+ const isDevolucao =(t)=> normText(t) === 'devolucao';
+ const isNaoLoc    =(t)=> normText(t) === 'tarifa nao localizada';
+ const isFreteMin  =(t)=> normText(t) === 'frete minimo';
+
+ // ===== Núcleo =====
+ function aggregateRows(getCell){
+   const idxFretePeso   = pickIdx(['Frete Peso','Frete_Peso','FretePeso']);
+   const idxPesoTaxado  = pickIdx(['Peso Taxado','Peso_Taxado','PesoTaxado']);
+   const idxFreteTabela = pickIdx(['Frete_Tabela','Frete Tabela','Valor Tabela','Vlr Tabela','Tabela']);
+   const idxVlrFrete    = pickIdx(['Vlr Frete','VlrFrete','Valor Frete','Frete']);
+   const idxStatus      = pickIdx(['Status_Tolerancia','Status Tolerancia','Status_Tolerancia','Status']);
+
+   const rows = getCell.rows();
+   let totalCobradoTarifado=0, totalCobradoGeral=0, totalSimulado=0, totalDiferenca=NaN, pctDiff=NaN;
+   let totalDevolucao=0, totalSemTarifa=0, totalFreteMinimo=0;
+   let totalNaoEncontrado = 0; // <-- NOVA VARIÁVEL
+
+   rows.forEach(r=>{
+     const vFretePeso = idxFretePeso  >=0 ? toNum(getCell.value(r, idxFretePeso))  : NaN;
+     const vPeso      = idxPesoTaxado >=0 ? toNum(getCell.value(r, idxPesoTaxado)) : NaN;
+     const vTabela    = idxFreteTabela>=0 ? toNum(getCell.value(r, idxFreteTabela)): NaN;
+     const vVlrFrete  = idxVlrFrete   >=0 ? toNum(getCell.value(r, idxVlrFrete))   : NaN;
+     const statusTxt  = idxStatus     >=0 ? getCell.value(r, idxStatus)           : '';
+
+     const produto = (Number.isFinite(vFretePeso) && Number.isFinite(vPeso)) ? vFretePeso * vPeso : NaN;
+     const ehDentroFora = isDentroTol(statusTxt) || isForaTol(statusTxt);
+
+     if(Number.isFinite(produto)) totalCobradoGeral += produto;
+     else if(Number.isFinite(vVlrFrete)) totalCobradoGeral += vVlrFrete;
+
+     if(ehDentroFora && Number.isFinite(produto)) totalCobradoTarifado += produto;
+     if(ehDentroFora && Number.isFinite(vTabela)) totalSimulado += vTabela;
+
+     if(isDevolucao(statusTxt)){
+       if(Number.isFinite(vVlrFrete)) totalDevolucao += vVlrFrete;
+     }
+     if(isNaoLoc(statusTxt)){
+       if(Number.isFinite(vVlrFrete)) totalSemTarifa += vVlrFrete;
+       else if(Number.isFinite(produto)) totalSemTarifa += produto;
+     }
+     if(isFreteMin(statusTxt)){
+       if(Number.isFinite(vVlrFrete)) totalFreteMinimo += vVlrFrete;
+       else if(Number.isFinite(produto)) totalFreteMinimo += produto;
+     }
+   });
+
+   if(Number.isFinite(totalCobradoTarifado) && Number.isFinite(totalSimulado)){
+     totalDiferenca = totalCobradoTarifado - totalSimulado;
+     pctDiff = totalSimulado === 0 ? (totalDiferenca === 0 ? 0 : NaN) : (totalDiferenca / totalSimulado) * 100;
+   }
+    
+   // <-- NOVO CÁLCULO
+   if(Number.isFinite(totalCobradoGeral) && Number.isFinite(totalCobradoTarifado)){
+       totalNaoEncontrado = totalCobradoGeral - totalCobradoTarifado;
+   }
+
+   return { // <-- ADICIONADO NOVO VALOR AO RETORNO
+     totalCobradoTarifado, totalCobradoGeral, totalSimulado, totalDiferenca, pctDiff,
+     totalDevolucao, totalSemTarifa, totalFreteMinimo, totalNaoEncontrado
+   };
+ }
+
+ // ===== Toggle zeros nos links do servidor =====
+ const zerosSwitch = document.getElementById('zerosSwitch');
+ function syncServerLinks(){
+   const links = document.querySelectorAll('a[data-dl="server"]');
+   links.forEach(a=>{
+     const base = a.getAttribute('data-basehref') || a.getAttribute('href') || '';
+     try{
+       const url = new URL(base, window.location.origin);
+       if(zerosSwitch && zerosSwitch.checked) url.searchParams.set('zeros','1');
+       else url.searchParams.delete('zeros');
+       a.setAttribute('href', url.pathname + url.search);
+     }catch(e){
+       if(zerosSwitch && zerosSwitch.checked){
+         a.setAttribute('href', base + (base.includes('?')?'&':'?') + 'zeros=1');
+       }else{
+         a.setAttribute('href', base.replace(/([?&])zeros=1(&|$)/,'$1').replace(/[?&]$/,''));
+       }
+     }
+   });
+ }
+ if(zerosSwitch){ zerosSwitch.addEventListener('change', syncServerLinks); }
+ syncServerLinks();
+
+ // ===== DataTables / Plain =====
+ function computeMetrics(agg){
+   setText('mCobrado',                fmtMoney(agg.totalCobradoTarifado));
+   setText('mCobradoGeral',           fmtMoney(agg.totalCobradoGeral));
+   setText('mSimulado',               fmtMoney(agg.totalSimulado));
+   setText('mDiferenca',              fmtMoney(agg.totalDiferenca));
+   setText('mForaPct',                fmtPct(agg.pctDiff));
+   setText('mDevValor',               fmtMoney(agg.totalDevolucao));
+   setText('mCobradoSemTarifa',       fmtMoney(agg.totalSemTarifa));
+   setText('mFreteMinimo',            fmtMoney(agg.totalFreteMinimo));
+   setText('mValoresAVerificar',  fmtMoney(agg.totalNaoEncontrado)); // <-- ATUALIZA O NOVO CARD
+
+   // Lógica para colorir a diferença
+   const difEl = document.getElementById('mDiferenca');
+   if (difEl) {
+       difEl.classList.remove('text-success', 'text-danger');
+       if (agg.totalDiferenca > 0.01) { // margem para evitar float issues
+           difEl.classList.add('text-danger');
+       } else if (agg.totalDiferenca < -0.01) {
+           difEl.classList.add('text-success');
+       }
+   }
+ }
+
+ if(tbl){
+   let dt=null;
+   if(window.jQuery && jQuery.fn && jQuery.fn.dataTable){
+     dt=jQuery('#result-table').DataTable({
+       responsive: false, // Desabilitado para permitir rolagem horizontal controlada
+       paging:true, searching:true,
+       pageLength:25, lengthMenu:[10,25,50,100,500],
+       dom:'<"row mb-2"<"col-md-6"l><"col-md-6"f>>t<"row mt-2"<"col-md-6"i><"col-md-6"p>>',
+       buttons: [
+         {
+           extend: 'csvHtml5',
+           className: 'btn btn-outline-secondary',
+           text: '<i class="bi bi-file-earmark-csv me-1"></i> CSV',
+           exportOptions: { rows: ':visible', format: { body: (d,r,c,n)=> exportFormatter(d,c) }}
+         },
+         {
+           extend: 'excelHtml5',
+           className: 'btn btn-outline-secondary',
+           text: '<i class="bi bi-file-earmark-excel me-1"></i> Excel',
+           exportOptions: { rows: ':visible', format: { body: (d,r,c,n)=> exportFormatter(d,c) }}
+         },
+         {
+           extend: 'copyHtml5',
+           className: 'btn btn-outline-secondary',
+           text: '<i class="bi bi-clipboard-check me-1"></i> Copiar',
+           exportOptions: { rows: ':visible' }
+         }
+       ],
+       language: {
+         url: 'https://cdn.datatables.net/plug-ins/2.0.7/i18n/pt-BR.json'
+       }
+     });
+
+     // Mover botões para a toolbar criada
+     dt.buttons().container().appendTo($('.toolbar'));
+
+     const exportFormatter = (d,c) => {
+       const z = document.getElementById('zerosSwitch');
+       if(!z || !z.checked) return d;
+       const ths = document.querySelectorAll('#result-table thead th');
+       const head = ths[c]?.textContent || '';
+       const h = (head||'').trim().toLowerCase();
+       const looksNum = [
+         'vlr frete','vlr_frete','frete_peso','peso taxado','frete_tabela',
+         'vlr_frete_peso_tabela','diferenca_frete','diferença_frete','diferenca_frete_peso',
+       ].some(k => h.includes(k));
+       if(looksNum){
+         const s = (d ?? '').toString().trim();
+         if(s==='' || s==='—' || s==='-') return '0';
+       }
+       return d;
+     }
+     
+     const recompute = () => {
+       const getCell = {
+         rows: ()=> dt.rows({search:'applied'}).indexes().toArray(),
+         value: (r,c)=> dt.cell(r,c).data()
+       };
+       const agg = aggregateRows(getCell);
+       computeMetrics(agg);
+     };
+
+     recompute();
+     dt.on('draw search', recompute);
+   } else {
+     // Fallback para tabela simples se DataTables não carregar
+     const getCell = {
+       rows: ()=> Array.from(tbl.querySelectorAll('tbody tr')),
+       value: (tr, idx)=> {
+         const td = tr.querySelectorAll('td')[idx];
+         return td ? td.textContent : '';
+       }
+     };
+     const agg = aggregateRows(getCell);
+     computeMetrics(agg);
+   }
+ }
+</script>
+{% endblock %}
