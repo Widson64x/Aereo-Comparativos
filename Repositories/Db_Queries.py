@@ -61,7 +61,7 @@ def get_ctcs(noca_list: list[str]) -> pd.DataFrame:
     sql_query = f"""
     SELECT 
         t1.nOca,
-        CONCAT(t2.filialctc, ' - ', t2.motivodoc) AS ctc_e_motivo
+        CONCAT(t2.motivodoc,' - ', t2.filialctc,  ' | (', t2.modal,') | ') AS ctc_e_motivo
     FROM 
         tb_airAWB t1
     JOIN 
@@ -92,26 +92,34 @@ def get_ctcs(noca_list: list[str]) -> pd.DataFrame:
 
 def get_ctc_peso(noca_list: list[str]) -> pd.DataFrame:
     """
-    Busca o 'peso_ctc_taxado' (soma de pesotax) de todos os CTCs 
-    para uma lista de nOcas.
-    Retorna um DataFrame com colunas 'Documento' e 'PesoCTC_Total'.
+    Busca os pesos (taxado, bruto) e determina o peso que será usado pela Cia. Aérea 
+    (o maior entre eles) para uma lista de nOcas.
+
+    Retorna um DataFrame com as colunas 'Documento', 'Peso_Taxado_CTC', 
+    'Peso_Bruto_CTC', 'PesoUsado_CIA', e 'TipoPeso_CIA'.
     """
     if not noca_list:
         return pd.DataFrame()
 
-    # Formata a lista de nOcas para uso na cláusula IN ('noca1', 'noca2', ...)
-    # Filtra valores vazios e únicos para a string do SQL
     valid_noca_list = [n for n in set(noca_list) if n and isinstance(n, str)]
     if not valid_noca_list:
-         return pd.DataFrame()
-         
+        return pd.DataFrame()
+        
     noca_str = ", ".join(f"'{noca}'" for noca in valid_noca_list)
 
-    # Consulta SQL OTIMIZADA para buscar e SOMAR o peso taxado por nOca
     sql_query = f"""
-    SELECT 
+    SELECT
         t1.nOca AS Documento,
-        SUM(c.pesotax) AS Peso_Taxado_CTC -- SUM do peso taxado
+        SUM(c.pesotax) AS Peso_Taxado_CTC,
+        SUM(c.peso) AS Peso_Bruto_CTC,
+        CASE 
+            WHEN SUM(c.pesotax) > SUM(c.peso) THEN SUM(c.pesotax)
+            ELSE SUM(c.peso)
+        END AS PesoUsado_CIA,
+        CASE 
+            WHEN SUM(c.pesotax) > SUM(c.peso) THEN 'Peso Taxado CTC'
+            ELSE 'Peso Bruto CTC'
+        END AS TipoPeso_CIA
     FROM 
         tb_airAWB t1
     JOIN 
@@ -126,20 +134,26 @@ def get_ctc_peso(noca_list: list[str]) -> pd.DataFrame:
     
     try:
         with engine.connect() as conn:
-            # pd.read_sql já traz o resultado do agrupamento
             result = pd.read_sql(sql_query, conn)
             
             if not result.empty:
-                # Converte para float para garantir o tipo correto no Pandas
+                # Converte as colunas de peso para float
                 result['Peso_Taxado_CTC'] = pd.to_numeric(result['Peso_Taxado_CTC'], errors='coerce')
-                print("Peso de CTC encontrado:", result)
-                return result.dropna(subset=['Peso_Taxado_CTC'])
-        print("Nenhum peso de CTC encontrado para as nOcas fornecidas.")
+                result['Peso_Bruto_CTC'] = pd.to_numeric(result['Peso_Bruto_CTC'], errors='coerce')
+                result['PesoUsado_CIA'] = pd.to_numeric(result['PesoUsado_CIA'], errors='coerce')
+                # A LINHA ABAIXO FOI REMOVIDA - TipoPeso_CIA é texto
+                # result['TipoPeso_CIA'] = pd.to_numeric(result['TipoPeso_CIA'], errors='coerce')
+
+                print("Dados de peso CTC encontrados:", result)
+                return result.dropna(subset=['PesoUsado_CIA'])
+
+        print("Nenhum dado de peso CTC encontrado para as nOcas fornecidas.")
         return pd.DataFrame()
     
     except Exception as e:
-        print(f"Erro ao buscar peso do CTC em volume: {e}")
+        print(f"Erro ao buscar dados de peso do CTC: {e}")
         return pd.DataFrame()
+    # Peso_Taxado_CTC
     
 def get_tipo_servico(noca_list: list[str]) -> pd.DataFrame:
     """

@@ -1,4 +1,4 @@
-# routes/ComparadorFretes.py
+# C:\Programs\Aéreo-Comparativos\Routes\ComparadorFretes.py
 from __future__ import annotations
 
 import re
@@ -18,9 +18,13 @@ from flask import (
 from Config import Appconfig
 from Utils.Files import ensure_dirs, allowed_file
 
-# Renomeamos as importações para serem específicas da LATAM
+# Importa fill_numeric_nans_with_zero do novo local (Utils.DataFrame_Helpers)
+from Utils.DataFrame_Helpers import fill_numeric_nans_with_zero
+
+# Importa o extrator
 from Repositories.Repositorio_FaturaLatam import extract_invoice_table as extract_invoice_table_latam
-from Services.Latam.ComparativoLatam import compare_fretes as compare_fretes_latam, fill_numeric_nans_with_zero
+from Services.Latam.ComparativoLatam import LatamFreightComparer 
+from Services.Latam.Latam_Metrics import LatamMetricsCalculator
 
 bp = Blueprint("fatura", __name__, template_folder="../Templates")
 
@@ -28,7 +32,7 @@ bp = Blueprint("fatura", __name__, template_folder="../Templates")
 COMPARISON_SERVICES = {
     'LATAM': {
         'extractor': extract_invoice_table_latam,
-        'comparator': compare_fretes_latam,
+        'comparator': LatamFreightComparer, # Classe armazenada
     },
     # 'AZUL': { # Futuramente, você adicionará a lógica da AZUL aqui
     #     'extractor': extract_invoice_table_azul,
@@ -321,9 +325,24 @@ def compare_batch_page(batch_id: str):
             acordos_path = paths.UPLOAD_DIR / f"{ts}_batch-{batch_id}_acordos.xlsx"
             acordos_file.save(str(acordos_path))
 
-            comparator_func = service['comparator']
-            df_export, df_display = comparator_func(df_base, str(acordos_path), app_cfg)
+            # === MUDANÇA CHAVE AQUI: INSTANCIAÇÃO E CHAMADA DO MÉTODO ===
+            
+            # 1. Pega a CLASSE do dicionário de serviços
+            ComparatorClass = service['comparator']
+            
+            # 2. Instancia a CLASSE, passando a configuração (app_cfg)
+            comparer_instance = ComparatorClass(app_cfg)
 
+            # 3. Chama o MÉTODO compare_fretes() da instância
+            df_export, df_display = comparer_instance.compare_fretes(df_base, str(acordos_path))
+
+            # ===========================================================
+            # 1. Calcula as métricas usando o df_export
+            metrics_calculator = LatamMetricsCalculator(df_export)
+            metrics = metrics_calculator.calculate_metrics()
+            # (Você pode passar 'metrics' para o template se quiser exibir os KPIs)
+
+            # 2. Salva os arquivos
             # Nome do arquivo de saída agora inclui a companhia
             out_base = f"{ts}_batch-{batch_id}_{company}_comparativo"
             out_xlsx_path = paths.OUTPUT_DIR / f"{out_base}.xlsx"
@@ -331,6 +350,7 @@ def compare_batch_page(batch_id: str):
             
             # Salva os arquivos de resultado...
             df_export.to_excel(out_xlsx_path, index=False)
+            # fill_numeric_nans_with_zero é importada e usada normalmente
             fill_numeric_nans_with_zero(df_export).to_excel(out_xlsx_zeros_path, index=False)
             # (O código do ExcelWriter pode ser adicionado de volta se formatação for crucial)
 
@@ -340,6 +360,7 @@ def compare_batch_page(batch_id: str):
                 company_name=company, 
                 table_html=df_display.to_html(classes="table table-sm table-hover", index=False, justify="left", na_rep="-"),
                 rows=len(df_display),
+                metrics=metrics,
                 download_url=url_for("fatura.download_batch", batch_id=batch_id)
             )
         except Exception as e:
@@ -353,7 +374,8 @@ def compare_batch_page(batch_id: str):
         company_name=company, 
         table_html=df_base.head(100).to_html(classes="table table-sm table-hover", index=False, justify="left", na_rep="-"),
         rows=len(df_base),
-        download_url=None
+        download_url=None,
+        metrics=None  # <--- ADICIONE ESTA LINHA
     )
 
 @bp.get("/download/batch/<batch_id>")

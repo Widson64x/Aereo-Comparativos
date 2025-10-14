@@ -339,4 +339,53 @@ def preview(df: pd.DataFrame, n: int = 100) -> Dict[str, list]:
     cols = list(df.columns)
     rows = df.head(n).to_dict(orient="records")
     return {"columns": cols, "rows": rows}
-# ==================== FIM DO NOVO BLOCO ====================
+
+# ==================== DEFINIÇÃO DA CLASSE REPOSITORY ====================
+# Esta é a classe que estava faltando e que seu SimulationService precisa importar.
+# ========================================================================
+
+class TabelaFretesRepository:
+    """
+    Esta classe centraliza o acesso e o processamento das tabelas de fretes
+    a partir de um arquivo Excel. Ela utiliza as funções definidas neste mesmo módulo.
+    """
+
+    def __init__(self, xlsx_path: str | Path):
+        """
+        Inicializa o repositório, guardando o caminho para o arquivo Excel de fretes.
+
+        Args:
+            xlsx_path (str | Path): O caminho para o arquivo .xlsx que contém as tabelas.
+        """
+        self.xlsx_path = Path(xlsx_path)
+        if not self.xlsx_path.exists():
+            raise FileNotFoundError(f"O arquivo de fretes não foi encontrado em: {self.xlsx_path}")
+
+    def carregar_fretes_normalizados(self, ignore_first_sheet: bool = False) -> pd.DataFrame:
+        """
+        Usa a função `normalizar_acordos` para carregar e padronizar
+        todos os fretes do arquivo Excel.
+
+        Returns:
+            pd.DataFrame: Um DataFrame com todos os fretes em formato padronizado.
+        """
+        # A função `normalizar_acordos` já existe no seu arquivo.
+        # A classe apenas a utiliza para organizar o acesso aos dados.
+        print(f"Normalizando fretes do arquivo: {self.xlsx_path}")
+        return normalizar_acordos(self.xlsx_path, ignore_first_sheet=ignore_first_sheet)
+
+    def carregar_fretes_por_tratamento(self, trat_code: str, tarifa_code: Optional[str] = None) -> pd.DataFrame:
+        """
+        Carrega fretes para um código de tratamento específico (ex: "RESMD"),
+        varrendo as abas que começam com "Est.".
+
+        Args:
+            trat_code (str): O código do tratamento a ser buscado.
+            tarifa_code (Optional[str]): Um código opcional para ajudar a encontrar a coluna de tarifa correta.
+
+        Returns:
+            pd.DataFrame: Um DataFrame com os fretes encontrados para aquele tratamento.
+        """
+        # A função `processar_abas_estacoes_por_tratamento` também já existe no arquivo.
+        print(f"Carregando fretes para o tratamento '{trat_code}'...")
+        return processar_abas_estacoes_por_tratamento(self.xlsx_path, trat_code, tarifa_code)
