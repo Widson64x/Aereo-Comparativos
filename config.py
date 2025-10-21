@@ -23,7 +23,7 @@ class Columns:
 class Servicesconfig:
     # Ordem importa (mais específico primeiro)
     VALID_CODES_ST2: List[str] = field(default_factory=lambda: ["ST2MD", "MD/PE", "MEDICAMENTOS", "MD"])
-    RESERVADO_CODE: str = "RESMD"
+    RESERVADO_CODE: str = "RESMD" # mapeamos RESERVADO → RESMD p/ lookup
     ESTANDAR_CODE: str = "ST2MD"  # mapeamos ESTANDAR → ST2MD p/ lookup
 
 @dataclass(frozen=True)

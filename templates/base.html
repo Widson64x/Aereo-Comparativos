@@ -43,10 +43,6 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm0 1h8a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1"/></svg>
             <span>Fatura Comparativo</span>
         </a>
-        <a class="sidebar-nav-link {{ 'active' if request.endpoint == 'formatador_acordos.index' else '' }}" href="{{ url_for('formatador_acordos.index') }}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M7.752.066a.5.5 0 0 1 .496 0l3.75 2.143a.5.5 0 0 1 .252.434v3.995l3.498 2A.5.5 0 0 1 16 9.07v1.86a.5.5 0 0 1-.252.434l-3.75 2.143a.5.5 0 0 1-.496 0l-3.502-2-3.502 2.001a.5.5 0 0 1-.496 0l-3.75-2.143A.5.5 0 0 1 0 10.93V9.07a.5.5 0 0 1 .252-.434l3.498-2V2.643a.5.5 0 0 1 .252-.434zM4.25 12.306l2.997-1.714 2.998 1.714 3.25-1.857V9.07l-3.5-2-3.5 2v3.236zm-3.5-2 3.5 2V6.867l-3.5-2v3.236zm11.5 0v-3.236l-3.5 2v3.236zM8 5.763l2.997-1.714L8 2.333 5.003 4.05 8 5.763zM4.25 4.05l2.997 1.714L8 7.48l-2.997-1.714L4.25 4.05z"/></svg>
-          <span>Padronizador</span>
-        </a>
         <a class="sidebar-nav-link {{ 'active' if request.endpoint == 'hist.faturas_home' else '' }}" href="{{ url_for('hist.faturas_home') }}">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 2A1.5 1.5 0 0 0 5 3.5v9A1.5 1.5 0 0 0 6.5 14h3a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 9.5 2zM5 3.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5z"/><path d="M3 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5m.5 2.5a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm-4-2.5a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1zm2 0a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z"/></svg>
           <span>Histórico</span>
@@ -89,7 +85,6 @@
       <input id="cmdk-input" class="cmdk-input" placeholder="Busque por uma ferramenta ou ação..." autocomplete="off" />
       <div class="cmdk-list" id="cmdk-list">
         <button data-href="{{ url_for('fatura.tool_home') }}"><b>Fatura Comparativo</b> — Processar fatura em PDF</button>
-        <button data-href="{{ url_for('formatador_acordos.index') }}"><b>Padronizador de Tabelas</b> — Padronizar planilhas de acordos</button>
         <button data-href="{{ url_for('hist.faturas_home') }}"><b>Histórico</b> — Consultar uploads e resultados</button>
         <button data-href="{{ url_for('main.index') }}"><b>Início</b> — Voltar para a página inicial</button>
       </div>

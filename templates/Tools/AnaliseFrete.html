@@ -95,7 +95,7 @@
         </div>
         <div class="row g-4">
             <div class="col-12 col-md-6 col-lg-3">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Vlr Frete apenas em linhas com status 'Dentro' ou 'Fora' da tolerância.">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Vlr Frete apenas em linhas com status 'Cobrado - Tarifado' ou 'Acordado - Simulado' da tolerância.">
                     <div class="metric-icon" style="color: #3b82f6;"><i class="bi bi-file-earmark-text"></i></div>
                     <div class="metric-content">
                         <h6>Cobrado — Tarifado</h6>
@@ -104,16 +104,16 @@
                 </div>
             </div>
             <div class="col-12 col-md-6 col-lg-3">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Frete_Tabela (valor da tabela) nas linhas com status 'Dentro' ou 'Fora'.">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Frete_Tabela (valor da tabela) nas linhas com status 'Cobrado - Tarifado' ou 'Acordado - Simulado'.">
                     <div class="metric-icon" style="color: #16a34a;"><i class="bi bi-file-earmark-ruled"></i></div>
                     <div class="metric-content">
-                        <h6>Acordado — Simulado</h6>
+                        <h6>COBRADO - TARIFADO</h6>
                         <div id="mSimulado" class="val">{{ metrics.total_simulado | format_currency }}</div>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-md-6 col-lg-3">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre 'Cobrado — Tarifado' e 'Acordado — Simulado'.">
+                <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre 'Cobrado — Tarifado' e 'COBRADO - TARIFADO'.">
                     <div class="metric-icon" style="color: #ef4444;"><i class="bi bi-graph-down-arrow"></i></div>
                     <div class="metric-content">
                         <h6>Diferença</h6>

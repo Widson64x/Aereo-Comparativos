@@ -1,4 +1,3 @@
-# Repositories/Repositorio_FaturaLatam.py
 from __future__ import annotations
 
 import re
@@ -19,7 +18,7 @@ import pdfplumber
 
 # Cabeçalhos (alvo) padronizados
 TARGET_COLS = [
-    "Tipo_Serviço", "Origem", "Data", "Destino", "Vlr Frete", "Outras Taxas",
+    "Tipo_Serviço", "Origem", "Data", "Destino", "Valor_Frete", "Outras Taxas",
     "Peso Taxado", "Vlr Total", "Numero Fiscal", "Documento", "Vlr Advalorem",
     "Tipo de Cte",
 ]
@@ -27,7 +26,7 @@ TARGET_COLS = [
 # Aliases para mapear variações de nomes de colunas
 HEADER_ALIASES = {
     r"^origem$": "Origem", r"^data$": "Data", r"^destino$": "Destino",
-    r"^v(ir|lr)\s*frete$": "Vlr Frete", r"^outras\s*taxas$": "Outras Taxas",
+    r"^v(ir|lr)\s*frete$": "Valor_Frete", r"^outras\s*taxas$": "Outras Taxas",
     r"^peso\s*taxado$": "Peso Taxado", r"^peso$": "Peso", r"^taxado$": "Taxado",
     r"^v(ir|lr)\s*total$": "Vlr Total", r"^(numero|n[úu]mero)\s*fiscal$": "Numero Fiscal",
     r"^documento$": "Documento", r"^v(ir|lr)\s*advalorem$": "Vlr Advalorem",
@@ -81,14 +80,14 @@ def _drop_noise_rows(df: pd.DataFrame) -> pd.DataFrame:
     if "Documento" in df.columns:
         is_data_row = df["Documento"].astype(str).str.contains(r"\d", regex=True, na=False)
         is_service_header = df.iloc[:, 0].astype(str).str.contains(
-            r"RESERVADO|ESTANDAR|VELOZ", case=False, na=False
+            r"RESERVADO|ESTANDAR|VELOZ|EFACIL", case=False, na=False # reconhece linhas de tipo de serviço
         )
         df = df[is_data_row | is_service_header]
     return df.dropna(how="all")
 
 def _add_service_type_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    service_keywords = ['RESERVADO MEDS', 'ESTANDAR 10 BASICO', 'ESTANDAR 2 BASICO', 'ESTANDAR 2 MEDS', 'VELOZ']
+    service_keywords = ['RESERVADO MEDS', 'ESTANDAR 10 BASICO', 'ESTANDAR 2 BASICO', 'ESTANDAR 2 MEDS', 'VELOZ', 'EFACIL 3 BASICO']
     pattern = '|'.join(service_keywords)
     is_service_header = df.iloc[:, 0].astype(str).str.contains(pattern, case=False, na=False)
     df['Tipo_Serviço'] = df.iloc[:, 0].where(is_service_header)
@@ -96,12 +95,12 @@ def _add_service_type_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df[~is_service_header].reset_index(drop=True)
     return df
 
-def _add_frete_peso(df: pd.DataFrame) -> pd.DataFrame:
+def _add_valor_tarifa(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    if "Vlr Frete" in df.columns and "Peso Taxado" in df.columns:
-        vlr_frete = pd.to_numeric(df["Vlr Frete"], errors='coerce')
+    if "Valor_Frete" in df.columns and "Peso Taxado" in df.columns:
+        valor_frete = pd.to_numeric(df["Valor_Frete"], errors='coerce')
         peso_taxado = pd.to_numeric(df["Peso Taxado"], errors='coerce')
-        df["Frete_Peso"] = np.where(peso_taxado.notna() & (peso_taxado != 0), vlr_frete / peso_taxado, pd.NA)
+        df["Valor_Tarifa"] = np.where(peso_taxado.notna() & (peso_taxado != 0), valor_frete / peso_taxado, pd.NA)
     return df
 
 def _final_column_order(df: pd.DataFrame) -> pd.DataFrame:
@@ -165,17 +164,17 @@ def extract_invoice_table(pdf_path: str) -> pd.DataFrame:
         body.columns = header[:len(body.columns)]
         processed_frames.append(body)
 
-    df = pd.concat(processed_frames, ignore_index=True)
+    DF_FATURA = pd.concat(processed_frames, ignore_index=True)
 
     # reparo antes de processar
-    df = _fix_merged_data_rows(df)
+    DF_FATURA = _fix_merged_data_rows(DF_FATURA)
 
-    df = _combine_split_columns(df)
-    df = _drop_noise_rows(df)
-    df = _add_service_type_and_clean(df)
-    df = _coerce_numbers(df, ["Vlr Frete", "Outras Taxas", "Peso Taxado", "Vlr Total", "Vlr Advalorem"])
-    df = _clean_documento(df)
-    df = _add_frete_peso(df)
-    df = _final_column_order(df)
+    DF_FATURA = _combine_split_columns(DF_FATURA)
+    DF_FATURA = _drop_noise_rows(DF_FATURA)
+    DF_FATURA = _add_service_type_and_clean(DF_FATURA)
+    DF_FATURA = _coerce_numbers(DF_FATURA, ["Valor_Frete", "Outras Taxas", "Peso Taxado", "Vlr Total", "Vlr Advalorem"])
+    DF_FATURA = _clean_documento(DF_FATURA)
+    DF_FATURA = _add_valor_tarifa(DF_FATURA)
+    DF_FATURA = _final_column_order(DF_FATURA)
 
-    return df.dropna(how="all").reset_index(drop=True)
+    return DF_FATURA.dropna(how="all").reset_index(drop=True)

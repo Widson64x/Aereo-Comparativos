@@ -325,34 +325,64 @@ def compare_batch_page(batch_id: str):
             acordos_path = paths.UPLOAD_DIR / f"{ts}_batch-{batch_id}_acordos.xlsx"
             acordos_file.save(str(acordos_path))
 
-            # === MUDANÇA CHAVE AQUI: INSTANCIAÇÃO E CHAMADA DO MÉTODO ===
-            
-            # 1. Pega a CLASSE do dicionário de serviços
+            # === LÓGICA DE COMPARAÇÃO ===
             ComparatorClass = service['comparator']
-            
-            # 2. Instancia a CLASSE, passando a configuração (app_cfg)
             comparer_instance = ComparatorClass(app_cfg)
-
-            # 3. Chama o MÉTODO compare_fretes() da instância
             df_export, df_display = comparer_instance.compare_fretes(df_base, str(acordos_path))
 
-            # ===========================================================
-            # 1. Calcula as métricas usando o df_export
+            # === MÉTRICAS E SALVAMENTO ===
             metrics_calculator = LatamMetricsCalculator(df_export)
             metrics = metrics_calculator.calculate_metrics()
-            # (Você pode passar 'metrics' para o template se quiser exibir os KPIs)
+            
+            # >>> INÍCIO DA ALTERAÇÃO <<<
+            # 1. Cria a nova planilha com rotas sem tarifa, somando valores e contando ocorrências
+            df_sem_tarifa_completo = df_export[df_export['Status'] == 'TARIFA NAO LOCALIZADA'].copy()
+            df_rotas_sem_tarifa = pd.DataFrame() # Inicializa como um DataFrame vazio
 
-            # 2. Salva os arquivos
-            # Nome do arquivo de saída agora inclui a companhia
+            if not df_sem_tarifa_completo.empty:
+                # Garante que a coluna de valor é numérica para a soma
+                df_sem_tarifa_completo['Valor_Frete'] = pd.to_numeric(df_sem_tarifa_completo['Valor_Frete'], errors='coerce').fillna(0)
+
+                # --- ALTERAÇÃO AQUI ---
+                # Agrupa por rota e usa .agg() para calcular a SOMA e a CONTAGEM
+                df_rotas_sem_tarifa = df_sem_tarifa_completo.groupby(
+                    ['Origem', 'Destino', 'Tipo_Servico']
+                ).agg(
+                    Soma_Valor_Frete=('Valor_Frete', 'sum'),
+                    Quantidade=('Valor_Frete', 'count') # Adiciona a contagem aqui
+                ).reset_index()
+                
+                # Renomeia as colunas para clareza na nova aba
+                df_rotas_sem_tarifa.rename(columns={
+                    'Origem': 'Origem da Rota',
+                    'Destino': 'Destino da Rota',
+                    'Tipo_Servico': 'Tipo de Serviço',
+                    'Soma_Valor_Frete': 'Valor Total Cobrado (Sem Tarifa)' # Renomeia a coluna da soma
+                }, inplace=True)
+
+                # Ordena para mostrar as rotas mais custosas primeiro
+                df_rotas_sem_tarifa.sort_values(by='Valor Total Cobrado (Sem Tarifa)', ascending=False, inplace=True)
+                df_rotas_sem_tarifa['Valor Total Cobrado (Sem Tarifa)'] = df_rotas_sem_tarifa['Valor Total Cobrado (Sem Tarifa)'].round(2)
+                
+            # 2. Prepara os nomes dos arquivos de saída
             out_base = f"{ts}_batch-{batch_id}_{company}_comparativo"
             out_xlsx_path = paths.OUTPUT_DIR / f"{out_base}.xlsx"
             out_xlsx_zeros_path = paths.OUTPUT_DIR / f"{out_base}.zeros.xlsx"
             
-            # Salva os arquivos de resultado...
-            df_export.to_excel(out_xlsx_path, index=False)
-            # fill_numeric_nans_with_zero é importada e usada normalmente
-            fill_numeric_nans_with_zero(df_export).to_excel(out_xlsx_zeros_path, index=False)
-            # (O código do ExcelWriter pode ser adicionado de volta se formatação for crucial)
+            # 3. Salva o arquivo Excel principal com múltiplas abas
+            with pd.ExcelWriter(out_xlsx_path, engine='openpyxl') as writer:
+                df_export.to_excel(writer, sheet_name='Comparativo Completo', index=False)
+                if not df_rotas_sem_tarifa.empty:
+                    df_rotas_sem_tarifa.to_excel(writer, sheet_name='Rotas Sem Tarifa', index=False)
+
+            # 4. Salva o arquivo Excel com zeros com múltiplas abas
+            df_export_zeros = fill_numeric_nans_with_zero(df_export)
+            with pd.ExcelWriter(out_xlsx_zeros_path, engine='openpyxl') as writer:
+                df_export_zeros.to_excel(writer, sheet_name='Comparativo (NaNs como 0)', index=False)
+                if not df_rotas_sem_tarifa.empty:
+                    df_rotas_sem_tarifa.to_excel(writer, sheet_name='Rotas Sem Tarifa', index=False)
+            
+            # >>> FIM DA ALTERAÇÃO <<<
 
             return render_template(
                 "Tools/AnaliseFrete.html",
@@ -375,7 +405,7 @@ def compare_batch_page(batch_id: str):
         table_html=df_base.head(100).to_html(classes="table table-sm table-hover", index=False, justify="left", na_rep="-"),
         rows=len(df_base),
         download_url=None,
-        metrics=None  # <--- ADICIONE ESTA LINHA
+        metrics=None
     )
 
 @bp.get("/download/batch/<batch_id>")
