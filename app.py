@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 from flask import Flask
-from Routes import ComparadorFretes, Main
+from Routes import ComparadorFretes, Main, KPI_Map
 from Config import Appconfig, Paths
 from Routes import HistoricoDocs
 from Utils.Files import ensure_dirs
@@ -78,6 +78,7 @@ def create_app() -> Flask:
     # Blueprints sob o mesmo prefixo
     app.register_blueprint(Main.bp, url_prefix=f"{BASE_PREFIX}/")
     app.register_blueprint(ComparadorFretes.bp, url_prefix=f"{BASE_PREFIX}/fatura")
+    app.register_blueprint(KPI_Map.bp, url_prefix=f"{BASE_PREFIX}/kpi") 
     app.register_blueprint(HistoricoDocs.bp, url_prefix=f"{BASE_PREFIX}/historico")
 
     # Health no prefixo (facilita teste via Nginx)

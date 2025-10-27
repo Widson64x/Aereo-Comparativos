@@ -150,7 +150,6 @@ class ProcessarTabelaLatam:
                 'Nome do Produto': 'Tipo_Servico',
                 'Origem': 'Origem',
                 'Destino': 'Destino',
-                # <-- NOVO: Adicionado Min Charge -->
                 'Min Charge': 'Frete_Minimo',
                 'Effective Date': 'Data_Efetivacao_Tarifa'
             }

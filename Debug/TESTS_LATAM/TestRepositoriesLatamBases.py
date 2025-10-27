@@ -20,7 +20,7 @@ pd.set_option('display.width', 200)
 pd.set_option('display.precision', 2) # Isso vai formatar 26.59
 
 # Caminho para o arquivo Excel de entrada
-caminho_do_arquivo = os.path.join(project_root, "Debug/Archives/Cópia de ACORDO LUFT CNPJ 52134798001563.xlsx")
+caminho_do_arquivo = os.path.join(project_root, "Debug/Archives/LATAM/Cópia de ACORDO LUFT CNPJ 52134798001563.xlsx")
 
 print(f"Iniciando o processamento do arquivo: {caminho_do_arquivo}\n")
 
@@ -44,8 +44,10 @@ try:
     # --- NOVO TRECHO PARA GERAR O EXCEL ---
     
     # 1. Define o caminho e o nome do arquivo de saída
-    #    (Vamos salvá-lo dentro da pasta 'Debug')
-    caminho_saida = os.path.join(project_root, "Debug", "Archives", "Saida_TabelaLatamFormatada.xlsx")
+    # --- GERAÇÃO DO ARQUIVO EXCEL DE DEBUG ---
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_filename = f'debug_servicos_bases_COMPLETO_{timestamp}.xlsx'
+    caminho_saida = os.path.join(project_root, 'Debug', 'Archives', 'LATAM', output_filename)
     
     # 2. Salva o DataFrame completo no arquivo Excel
     #    index=False evita que o índice do pandas (0, 1, 2...) seja salvo

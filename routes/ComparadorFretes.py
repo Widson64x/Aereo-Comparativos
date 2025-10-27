@@ -173,7 +173,7 @@ def tool_home():
     max_files = int(current_app.config.get("MAX_PDF_UPLOAD_COUNT", 10))
 
     return render_template(
-        "Tools/ImportarFrete.html",
+        "Tools/ImportarFatura.html",
         recent_files=recent_files,
         limits={"max_mb": max_mb, "max_files": max_files}
     )
@@ -333,7 +333,11 @@ def compare_batch_page(batch_id: str):
             # === MÉTRICAS E SALVAMENTO ===
             metrics_calculator = LatamMetricsCalculator(df_export)
             metrics = metrics_calculator.calculate_metrics()
-            
+
+            # >>> grava o mesmo dataframe da TABELA no cache usado pelo mapa <<<
+            cache_batch = paths.CACHE_DIR / f"batch_{batch_id}.feather"
+            df_export.to_feather(cache_batch)
+                        
             # >>> INÍCIO DA ALTERAÇÃO <<<
             # 1. Cria a nova planilha com rotas sem tarifa, somando valores e contando ocorrências
             df_sem_tarifa_completo = df_export[df_export['Status'] == 'TARIFA NAO LOCALIZADA'].copy()

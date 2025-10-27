@@ -19,7 +19,7 @@ pd.set_option('display.width', 200)
 pd.set_option('display.precision', 2)
 
 # Caminho para o arquivo Excel de entrada
-caminho_do_arquivo = os.path.join(project_root, "Debug/Archives/Cópia de ACORDO LUFT CNPJ 52134798001563.xlsx")
+caminho_do_arquivo = os.path.join(project_root, "Debug/Archives/LATAM/Cópia de ACORDO LUFT CNPJ 52134798001563.xlsx")
 
 print(f"Iniciando o processamento do arquivo: {caminho_do_arquivo}\n")
 

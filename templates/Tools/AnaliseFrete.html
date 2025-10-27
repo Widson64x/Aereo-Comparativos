@@ -1,333 +1,413 @@
+{# C:\Programs\Aéreo-Comparativos\Templates\Tools\AnaliseFrete.html #}
 {% extends "Base.html" %}
 {% block title %}Análises Aéreo — Comparativo{% endblock %}
 
 {% block head_extra %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link href="{{ url_for('static', filename='css/AnaliseFrete.css') }}" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  #map { height: calc(100vh - 240px); min-height: 520px; width: 100%; border-radius: 16px; display:block }
+  .map-toolbar { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap }
+  .badge-pill { border-radius: 999px; padding:.25rem .6rem; font-size:.85rem }
+  .small-label{ font-size:.8rem; color:#6b7280 }
+
+  /* rotas */
+  .route-glow { stroke: #ffffff; stroke-opacity:.55; stroke-width: 8; }
+  .route-main { stroke-linecap: round; stroke-linejoin: round; }
+  .route-anim { stroke-dasharray: 10 14; animation: dash 2.4s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -480; } }
+
+  /* animação de troca Tabela ↔ Mapa */
+  .hidden-view{ display:none !important; }
+  .anim-in-right{ animation: slideInRight .35s ease both; }
+  .anim-out-left{ animation: slideOutLeft .35s ease both; }
+  .anim-in-left{ animation: slideInLeft .35s ease both; }
+  .anim-out-right{ animation: slideOutRight .35s ease both; }
+  @keyframes slideInRight{ from{opacity:0; transform:translateX(24px)} to{opacity:1; transform:translateX(0)} }
+  @keyframes slideOutLeft{ from{opacity:1; transform:translateX(0)} to{opacity:0; transform:translateX(-24px)} }
+  @keyframes slideInLeft{ from{opacity:0; transform:translateX(-24px)} to{opacity:1; transform:translateX(0)} }
+  @keyframes slideOutRight{ from{opacity:1; transform:translateX(0)} to{opacity:0; transform:translateX(24px)} }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="analysis-page-container">
-    <div class="page-header" data-aos="fade-down">
-        <div>
-            <h1 class="page-title">Análise Comparativa de Fatura</h1>
-            <p class="page-subtitle">Faça o upload da planilha de tabelas para comparar com os dados da fatura.</p>
+  <div class="page-header" data-aos="fade-down">
+    <div>
+      <h1 class="page-title">Análise Comparativa de Fatura</h1>
+      <p class="page-subtitle">Faça o upload da planilha de tabelas para comparar com os dados da fatura.</p>
+    </div>
+    <div class="stepper">
+      <div class="step"><span>1</span> Importar Fatura</div>
+      <div class="step active"><span>2</span> Comparar Tabelas</div>
+    </div>
+  </div>
+
+  <section class="card upload-section" data-aos="fade-up">
+    <div class="card-body p-4">
+      <form id="upload-form" method="post" enctype="multipart/form-data" class="row g-3 align-items-center">
+        <div class="col-lg-6">
+          <label for="acordos_file_input" class="dropzone-area">
+            <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+            <div class="dropzone-text">
+              <strong>Arraste e solte a planilha de Tabelas aqui</strong>
+              <span>ou clique para selecionar o arquivo (.xlsx)</span>
+            </div>
+            <span id="file-name-display" class="file-name-display"></span>
+          </label>
+          <input class="form-control" type="file" name="acordos_file" id="acordos_file_input" accept=".xlsx" required hidden />
         </div>
-        <div class="stepper">
-            <div class="step"><span>1</span> Importar Fatura</div>
-            <div class="step active"><span>2</span> Comparar Tabelas</div>
+
+        <div class="col-lg-3">
+          <button class="btn btn-primary w-100" type="submit">
+            <i class="bi bi-bar-chart-line-fill me-2"></i>Comparar Agora
+          </button>
         </div>
+
+        {% if download_url %}
+        <div class="col-lg-3">
+          <div class="download-box">
+            <div class="btn-group w-100">
+              <a class="btn btn-success" data-dl="server" data-basehref="{{ download_url }}" href="{{ download_url }}" download>
+                <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Baixar XLSX
+              </a>
+              <a class="btn btn-outline-success" data-dl="server" data-basehref="{{ download_url }}?format=csv" href="{{ download_url }}?format=csv" download>
+                CSV
+              </a>
+            </div>
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" id="zerosSwitch">
+              <label class="form-check-label" for="zerosSwitch">Exportar nulos como 0</label>
+            </div>
+            <small class="text-muted d-block mt-1 text-center">Batch: {{ batch_id }}</small>
+          </div>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </section>
+
+  {% if metrics %}
+  <div data-aos="fade-up" data-aos-delay="100">
+    <div class="kpi-header">
+      <i class="bi bi-globe2 text-secondary"></i>
+      <h5>Visão Geral</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-12 col-md-6">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Vlr Frete para TODAS as linhas.">
+          <div class="metric-icon" style="color:#8b5cf6;"><i class="bi bi-cash-stack"></i></div>
+          <div class="metric-content">
+            <h6>Valor Total Cobrado (Geral)</h6>
+            <div id="mCobradoGeral" class="val">{{ metrics.total_cobrado_geral | format_currency }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre o 'Valor Total Cobrado (Geral)' e o 'Cobrado — Tarifado'.">
+          <div class="metric-icon" style="color:#f97316;"><i class="bi bi-search"></i></div>
+          <div class="metric-content">
+            <h6>Valores a Verificar</h6>
+            <div id="mValoresAVerificar" class="val">{{ metrics.total_valores_a_verificar | format_currency }}</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <section class="card upload-section" data-aos="fade-up">
-        <div class="card-body p-4">
-            <form id="upload-form" method="post" enctype="multipart/form-data" class="row g-3 align-items-center">
-                <div class="col-lg-6">
-                    <label for="acordos_file_input" class="dropzone-area">
-                        <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
-                        <div class="dropzone-text">
-                            <strong>Arraste e solte a planilha de Tabelas aqui</strong>
-                            <span>ou clique para selecionar o arquivo (.xlsx)</span>
-                        </div>
-                        <span id="file-name-display" class="file-name-display"></span>
-                    </label>
-                    <input class="form-control" type="file" name="acordos_file" id="acordos_file_input" accept=".xlsx" required hidden />
-                </div>
-
-                <div class="col-lg-3">
-                    <button class="btn btn-primary w-100" type="submit">
-                        <i class="bi bi-bar-chart-line-fill me-2"></i>Comparar Agora
-                    </button>
-                </div>
-
-                {% if download_url %}
-                <div class="col-lg-3">
-                    <div class="download-box">
-                        <div class="btn-group w-100">
-                            <a class="btn btn-success" data-dl="server" data-basehref="{{ download_url }}" href="{{ download_url }}" download>
-                                <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Baixar XLSX
-                            </a>
-                            <a class="btn btn-outline-success" data-dl="server" data-basehref="{{ download_url }}?format=csv" href="{{ download_url }}?format=csv" download>
-                                CSV
-                            </a>
-                        </div>
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input" type="checkbox" id="zerosSwitch">
-                            <label class="form-check-label" for="zerosSwitch">Exportar nulos como 0</label>
-                        </div>
-                        <small class="text-muted d-block mt-1 text-center">Batch: {{ batch_id }}</small>
-                    </div>
-                </div>
-                {% endif %}
-            </form>
-        </div>
-    </section>
-    {% if metrics %}  {# <--- Adicione esta verificação #}
-    <div data-aos="fade-up" data-aos-delay="100">
-        <div class="kpi-header">
-            <i class="bi bi-globe2 text-secondary"></i>
-            <h5>Visão Geral</h5>
-        </div>
-        <div class="row g-4">
-            <div class="col-12 col-md-6">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Vlr Frete para TODAS as linhas.">
-                    <div class="metric-icon" style="color: #8b5cf6;"><i class="bi bi-cash-stack"></i></div>
-                    <div class="metric-content">
-                        <h6>Valor Total Cobrado (Geral)</h6>
-                        <div id="mCobradoGeral" class="val">{{ metrics.total_cobrado_geral | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-6">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre o 'Valor Total Cobrado (Geral)' e o 'Cobrado — Tarifado'.">
-                    <div class="metric-icon" style="color: #f97316;"><i class="bi bi-search"></i></div>
-                    <div class="metric-content">
-                        <h6>Valores a Verificar</h6>
-                        <div id="mValoresAVerificar" class="val">{{ metrics.total_valores_a_verificar | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="kpi-header mt-4">
-            <i class="bi bi-check-circle-fill text-primary"></i>
-            <h5>Simulados (Linhas Tarifadas)</h5>
-        </div>
-        <div class="row g-4">
-            <div class="col-12 col-md-6 col-lg-3">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Vlr Frete apenas em linhas com status 'Cobrado - Tarifado' ou 'Acordado - Simulado' da tolerância.">
-                    <div class="metric-icon" style="color: #3b82f6;"><i class="bi bi-file-earmark-text"></i></div>
-                    <div class="metric-content">
-                        <h6>Cobrado — Tarifado</h6>
-                        <div id="mCobrado" class="val">{{ metrics.total_cobrado_tarifado | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-6 col-lg-3">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Frete_Tabela (valor da tabela) nas linhas com status 'Cobrado - Tarifado' ou 'Acordado - Simulado'.">
-                    <div class="metric-icon" style="color: #16a34a;"><i class="bi bi-file-earmark-ruled"></i></div>
-                    <div class="metric-content">
-                        <h6>COBRADO - TARIFADO</h6>
-                        <div id="mSimulado" class="val">{{ metrics.total_simulado | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-6 col-lg-3">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre 'Cobrado — Tarifado' e 'COBRADO - TARIFADO'.">
-                    <div class="metric-icon" style="color: #ef4444;"><i class="bi bi-graph-down-arrow"></i></div>
-                    <div class="metric-content">
-                        <h6>Diferença</h6>
-                        {% set diff_color = 'text-success' if metrics.total_diferenca < 0 else 'text-danger' if metrics.total_diferenca > 0 else '' %}
-                        <div id="mDiferenca" class="val {{ diff_color }}">{{ metrics.total_diferenca | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-6 col-lg-3">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Variação percentual da diferença em relação ao valor acordado.">
-                    <div class="metric-icon" style="color: #eab308;"><i class="bi bi-percent"></i></div>
-                    <div class="metric-content">
-                        <h6>% Diferença</h6>
-                        <div id="mForaPct" class="val">{{ metrics.pct_diff | format_percent }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="kpi-header mt-4">
-            <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-            <h5>Valores Verificados</h5>
-        </div>
-        <div class="row g-4">
-            <div class="col-12 col-md-4">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado das linhas com Status = 'Tarifa Não Localizada'.">
-                    <div class="metric-icon" style="color: #64748b;"><i class="bi bi-file-earmark-x"></i></div>
-                    <div class="metric-content">
-                        <h6>Cobrado sem Tarifa</h6>
-                        <div id="mCobradoSemTarifa" class="val">{{ metrics.total_sem_tarifa | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado nas linhas com Status = 'Devolução'.">
-                    <div class="metric-icon" style="color: #14b8a6;"><i class="bi bi-arrow-return-left"></i></div>
-                    <div class="metric-content">
-                        <h6>Valor de Devolução</h6>
-                        <div id="mDevValor" class="val">{{ metrics.total_devolucao | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado nas linhas com Status = 'Frete Mínimo'.">
-                    <div class="metric-icon" style="color: #d946ef;"><i class="bi bi-shield-check"></i></div>
-                    <div class="metric-content">
-                        <h6>Frete Mínimo</h6>
-                        <div id="mFreteMinimo" class="val">{{ metrics.total_frete_minimo | format_currency }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="kpi-header mt-4">
+      <i class="bi bi-check-circle-fill text-primary"></i>
+      <h5>Simulados (Linhas Tarifadas)</h5>
     </div>
-    {% endif %}  {# <--- Feche a verificação aqui #}
-    <section class="card data-table-section" data-aos="fade-up" data-aos-delay="200">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="card-title mb-0">Prévia do Resultado ({{ rows|default(0) }} linhas)</h5>
-                <div class="toolbar"></div>
-            </div>
-            <div class="table-wrapper">
-                <div id="table-wrap">
-                    {% if table_html %}
-                        {{ table_html|safe }}
-                    {% else %}
-                        <div class="empty-state">
-                            <i class="bi bi-table"></i>
-                            <p>A tabela de resultados aparecerá aqui após o processamento.</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
+    <div class="row g-4">
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Vlr Frete em 'Cobrado - Tarifado' ou 'Acordado - Simulado'.">
+          <div class="metric-icon" style="color:#3b82f6;"><i class="bi bi-file-earmark-text"></i></div>
+          <div class="metric-content">
+            <h6>Cobrado — Tarifado</h6>
+            <div id="mCobrado" class="val">{{ metrics.total_cobrado_tarifado | format_currency }}</div>
+          </div>
         </div>
-    </section>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Somatório de Frete_Tabela nas linhas simuladas.">
+          <div class="metric-icon" style="color:#16a34a;"><i class="bi bi-file-earmark-ruled"></i></div>
+          <div class="metric-content">
+            <h6>COBRADO - TARIFADO</h6>
+            <div id="mSimulado" class="val">{{ metrics.total_simulado | format_currency }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Diferença entre os valores.">
+          <div class="metric-icon" style="color:#ef4444;"><i class="bi bi-graph-down-arrow"></i></div>
+          <div class="metric-content">
+            <h6>Diferença</h6>
+            {% set diff_color = 'text-success' if metrics.total_diferenca < 0 else 'text-danger' if metrics.total_diferenca > 0 else '' %}
+            <div id="mDiferenca" class="val {{ diff_color }}">{{ metrics.total_diferenca | format_currency }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="metric-card" data-bs-toggle="tooltip" title="% de diferença.">
+          <div class="metric-icon" style="color:#eab308;"><i class="bi bi-percent"></i></div>
+          <div class="metric-content">
+            <h6>% Diferença</h6>
+            <div id="mForaPct" class="val">{{ metrics.pct_diff | format_percent }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-header mt-4">
+      <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+      <h5>Valores Verificados</h5>
+    </div>
+    <div class="row g-4">
+      <div class="col-12 col-md-4">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado nas linhas com Status = 'Tarifa Não Localizada'.">
+          <div class="metric-icon" style="color:#64748b;"><i class="bi bi-file-earmark-x"></i></div>
+          <div class="metric-content">
+            <h6>Cobrado sem Tarifa</h6>
+            <div id="mCobradoSemTarifa" class="val">{{ metrics.total_sem_tarifa | format_currency }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado nas linhas com Status = 'Devolução'.">
+          <div class="metric-icon" style="color:#14b8a6;"><i class="bi bi-arrow-return-left"></i></div>
+          <div class="metric-content">
+            <h6>Valor de Devolução</h6>
+            <div id="mDevValor" class="val">{{ metrics.total_devolucao | format_currency }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="metric-card" data-bs-toggle="tooltip" title="Total cobrado nas linhas com Status = 'Frete Mínimo'.">
+          <div class="metric-icon" style="color:#d946ef;"><i class="bi bi-shield-check"></i></div>
+          <div class="metric-content">
+            <h6>Frete Mínimo</h6>
+            <div id="mFreteMinimo" class="val">{{ metrics.total_frete_minimo | format_currency }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if batch_id %}
+  <!-- MAPA (inicialmente oculto) -->
+  <section id="map-card" class="card hidden-view" data-aos="fade-up" data-aos-delay="150">
+    <div class="card-body p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="map-toolbar">
+          <span class="badge bg-secondary badge-pill">Batch: {{ batch_id }}</span>
+
+          <div class="btn-group" role="group" aria-label="Escala de Arestas">
+            <input type="radio" class="btn-check" name="edgeScale" id="scaleCount" checked>
+            <label class="btn btn-outline-primary" for="scaleCount">Por Qtde</label>
+            <input type="radio" class="btn-check" name="edgeScale" id="scaleFrete">
+            <label class="btn btn-outline-primary" for="scaleFrete">Por Frete</label>
+          </div>
+
+          <div class="form-check ms-2">
+            <input class="form-check-input" type="checkbox" id="toggleNodes" checked>
+            <label class="form-check-label" for="toggleNodes">Mostrar nós</label>
+          </div>
+          <div class="form-check ms-2">
+            <input class="form-check-input" type="checkbox" id="toggleLinks" checked>
+            <label class="form-check-label" for="toggleLinks">Mostrar rotas</label>
+          </div>
+
+          <!-- Filtros -->
+          <div class="form-check ms-3">
+            <input class="form-check-input" type="checkbox" id="fDev">
+            <label class="form-check-label" for="fDev">Devolução</label>
+          </div>
+          <div class="form-check ms-1">
+            <input class="form-check-input" type="checkbox" id="fSem">
+            <label class="form-check-label" for="fSem">Sem tarifa</label>
+          </div>
+          <div class="form-check ms-1">
+            <input class="form-check-input" type="checkbox" id="fMin">
+            <label class="form-check-label" for="fMin">Frete mínimo</label>
+          </div>
+          <div class="form-check ms-1">
+            <input class="form-check-input" type="checkbox" id="fPex">
+            <label class="form-check-label" for="fPex">Peso excedente</label>
+          </div>
+          <div class="form-check ms-1">
+            <input class="form-check-input" type="checkbox" id="fDif">
+            <label class="form-check-label" for="fDif">Com diferença</label>
+          </div>
+
+          <div class="form-check ms-3">
+            <input class="form-check-input" type="checkbox" id="fEnv">
+            <label class="form-check-label" for="fEnv">Só envios ➜</label>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button id="btnBackTable" type="button" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-table"></i> Tabela
+          </button>
+        </div>
+      </div>
+
+      <div id="map"></div>
+      <div class="mt-2 d-flex flex-wrap gap-2" id="mapKpis"></div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- TABELA (visível por padrão) -->
+  <section id="table-card" class="card data-table-section" data-aos="fade-up" data-aos-delay="200">
+    <div class="card-body p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="card-title mb-0">Prévia do Resultado ({{ rows|default(0) }} linhas)</h5>
+        <div class="d-flex align-items-center gap-2">
+          <div class="toolbar"></div>
+          {% if batch_id %}
+          <button id="btnShowMap" type="button" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-map"></i> Mapa
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <div id="table-wrap">
+          {% if table_html %}
+            {{ table_html|safe }}
+          {% else %}
+          <div class="empty-state">
+            <i class="bi bi-table"></i>
+            <p>A tabela de resultados aparecerá aqui após o processamento.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicializar Tooltips do Bootstrap
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el, { container: 'body' }));
+  // tooltips
+  const tEls=[].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tEls.forEach(el=>new bootstrap.Tooltip(el,{container:'body'}));
 
-    // ===== Lógica da Dropzone =====
-    const form = document.getElementById('upload-form');
-    const fileInput = document.getElementById('acordos_file_input');
-    const dropzoneArea = document.querySelector('.dropzone-area');
-    const fileNameDisplay = document.getElementById('file-name-display');
+  // dropzone
+  const fileInput=document.getElementById('acordos_file_input');
+  const dz=document.querySelector('.dropzone-area');
+  const fn=document.getElementById('file-name-display');
+  if(dz){
+    dz.addEventListener('click',()=>fileInput.click());
+    fileInput.addEventListener('change',()=>{ if(fileInput.files.length){ fn.textContent=fileInput.files[0].name; dz.classList.add('has-file'); }});
+    ['dragenter','dragover','dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();ev.stopPropagation();}));
+    ['dragenter','dragover'].forEach(e=>dz.addEventListener(e,()=>dz.classList.add('dragover')));
+    ['dragleave','drop'].forEach(e=>dz.addEventListener(e,()=>dz.classList.remove('dragover')));
+    dz.addEventListener('drop',e=>{ fileInput.files=e.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); });
+  }
 
-    if (dropzoneArea) {
-        dropzoneArea.addEventListener('click', () => fileInput.click());
+  // download zeros
+  const zSw=document.getElementById('zerosSwitch');
+  function syncLinks(){
+    document.querySelectorAll('a[data-dl="server"]').forEach(a=>{
+      const base=a.getAttribute('data-basehref')||a.getAttribute('href')||'';
+      try{
+        const u=new URL(base,window.location.origin);
+        if(zSw?.checked) u.searchParams.set('zeros','1'); else u.searchParams.delete('zeros');
+        a.href=u.pathname+u.search;
+      }catch(_){
+        if(zSw?.checked) a.href=base+(base.includes('?')?'&':'?')+'zeros=1';
+        else a.href=base.replace(/([?&])zeros=1(&|$)/,'$1').replace(/[?&]$/,'');
+      }
+    });
+  }
+  if(zSw){ zSw.addEventListener('change',syncLinks); syncLinks(); }
 
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
-                fileNameDisplay.textContent = fileInput.files[0].name;
-                dropzoneArea.classList.add('has-file');
-            }
-        });
+  // DataTable
+  const tbl=document.querySelector('#table-wrap table');
+  if(tbl && window.jQuery && jQuery.fn && jQuery.fn.dataTable){
+    tbl.id='result-table';
+    tbl.classList.add('table','table-striped','table-hover','align-middle');
+    const exportFormatter=(d,c)=>{
+      const z=document.getElementById('zerosSwitch');
+      if(!z||!z.checked) return d;
+      const h=(document.querySelectorAll('#result-table thead th')[c]?.textContent||'').trim().toLowerCase();
+      const looksNum=['vlr frete','vlr_frete','frete_peso','peso taxado','frete_tabela','vlr_frete_peso_tabela','diferenca_frete','diferença_frete','diferenca_frete_peso']
+        .some(k=>h.includes(k.replace(/_/g,' ')));
+      const s=(d??'').toString().trim();
+      if(looksNum&&(s===''||s==='—'||s==='-')) return '0';
+      return d;
+    };
+    jQuery('#result-table').DataTable({
+      responsive:false,paging:true,searching:true,pageLength:25,lengthMenu:[10,25,50,100,500],
+      dom:'<"row mb-2"<"col-md-6"l><"col-md-6"f>>t<"row mt-2"<"col-md-6"i><"col-md-6"p>>',
+      buttons:[
+        {extend:'csvHtml5',className:'btn btn-outline-secondary',text:'<i class="bi bi-file-earmark-csv me-1"></i> CSV',
+         exportOptions:{rows:':visible',format:{body:(d,r,c)=>exportFormatter(d,c)}}},
+        {extend:'excelHtml5',className:'btn btn-outline-secondary',text:'<i class="bi bi-file-earmark-excel me-1"></i> Excel',
+         exportOptions:{rows:':visible',format:{body:(d,r,c)=>exportFormatter(d,c)}}},
+        {extend:'copyHtml5',className:'btn btn-outline-secondary',text:'<i class="bi bi-clipboard-check me-1"></i> Copiar',
+         exportOptions:{rows:':visible'}}
+      ],
+      language:{url:'https://cdn.datatables.net/plug-ins/2.0.7/i18n/pt-BR.json'}
+    });
+    jQuery('.toolbar').html(jQuery('#result-table').DataTable().buttons().container());
+  }
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropzoneArea.addEventListener(eventName, e => {
-                e.preventDefault();
-                e.stopPropagation();
-            }, false);
-        });
+  // Toggle Tabela ↔ Mapa com animação
+  const mapCard=document.getElementById('map-card');
+  const tableCard=document.getElementById('table-card');
+  const showBtn=document.getElementById('btnShowMap');
+  const backBtn=document.getElementById('btnBackTable');
+  const dataUrl="{{ url_for('kpi_map.map_data', batch_id=batch_id) if batch_id else '' }}";
+  const batchId="{{ batch_id }}";
+  let mapReady=false;
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropzoneArea.addEventListener(eventName, () => dropzoneArea.classList.add('dragover'), false);
-        });
+  function swapViews(fromEl, toEl, outCls, inCls, afterShow){
+    if(!fromEl || !toEl) return;
+    fromEl.classList.remove('hidden-view','anim-in-left','anim-in-right','anim-out-left','anim-out-right');
+    toEl.classList.remove('hidden-view','anim-in-left','anim-in-right','anim-out-left','anim-out-right');
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropzoneArea.addEventListener(eventName, () => dropzoneArea.classList.remove('dragover'), false);
-        });
+    // prepara alvo
+    toEl.style.display='block';
+    toEl.classList.add(inCls);
 
-        dropzoneArea.addEventListener('drop', e => {
-            fileInput.files = e.dataTransfer.files;
-            const changeEvent = new Event('change');
-            fileInput.dispatchEvent(changeEvent);
-        }, false);
+    // anima origem e depois oculta
+    fromEl.classList.add(outCls);
+    const onFromEnd=()=>{ fromEl.style.display='none'; fromEl.classList.remove(outCls); fromEl.classList.add('hidden-view'); fromEl.removeEventListener('animationend', onFromEnd); };
+    fromEl.addEventListener('animationend', onFromEnd);
+
+    const onToEnd=()=>{ toEl.classList.remove(inCls); toEl.removeEventListener('animationend', onToEnd); if(typeof afterShow==='function'){ afterShow(); } };
+    toEl.addEventListener('animationend', onToEnd);
+  }
+
+  function toMap(){
+    if(!mapReady && dataUrl){
+      KPIMap.init('map', dataUrl, batchId);
+      mapReady=true;
+      // pequena defasagem para garantir tiles renderizados antes de fit
+      setTimeout(()=>{ KPIMap.invalidate(); KPIMap.fit(); }, 50);
+    }else{
+      KPIMap.invalidate();
+      KPIMap.fit();
     }
-    
-    // ===== Lógica do Download Switch (Exportar nulos como 0) =====
-    const zerosSwitch = document.getElementById('zerosSwitch');
-    function syncServerLinks(){
-      const links = document.querySelectorAll('a[data-dl="server"]');
-      links.forEach(a=>{
-        const base = a.getAttribute('data-basehref') || a.getAttribute('href') || '';
-        try{
-          const url = new URL(base, window.location.origin);
-          if(zerosSwitch && zerosSwitch.checked) url.searchParams.set('zeros','1');
-          else url.searchParams.delete('zeros');
-          a.setAttribute('href', url.pathname + url.search);
-        }catch(e){
-          // Fallback para URLs relativas
-          if(zerosSwitch && zerosSwitch.checked){
-            a.setAttribute('href', base + (base.includes('?')?'&':'?') + 'zeros=1');
-          }else{
-            a.setAttribute('href', base.replace(/([?&])zeros=1(&|$)/,'$1').replace(/[?&]$/,''));
-          }
-        }
-      });
-    }
-    if(zerosSwitch){ zerosSwitch.addEventListener('change', syncServerLinks); }
-    syncServerLinks();
+    swapViews(tableCard, mapCard, 'anim-out-left', 'anim-in-right', ()=>{ KPIMap.invalidate(); KPIMap.fit(); });
+  }
+  function toTable(){
+    swapViews(mapCard, tableCard, 'anim-out-right', 'anim-in-left');
+  }
 
-    // ===== Inicialização do DataTables =====
-    const wrap=document.getElementById('table-wrap');
-    const tbl=wrap?wrap.querySelector('table'):null;
-    if(tbl){
-        tbl.id='result-table'; 
-        tbl.classList.add('table','table-striped','table-hover','align-middle');
-        
-        // A função de exportação agora APENAS formata para o DataTables/export
-        const exportFormatter = (d,c) => {
-          const z = document.getElementById('zerosSwitch');
-          if(!z || !z.checked) return d;
-          
-          // Lógica de cabeçalho mantida apenas para a exportação de 0's, 
-          // pois o Python já formatou a tabela para exibição
-          const ths = document.querySelectorAll('#result-table thead th');
-          const head = ths[c]?.textContent || '';
-          const h = (head||'').trim().toLowerCase();
-          const looksNum = [
-            'vlr frete','vlr_frete','frete_peso','peso taxado','frete_tabela',
-            'vlr_frete_peso_tabela','diferenca_frete','diferença_frete','diferenca_frete_peso',
-          ].some(k => h.includes(k.replace(/_/g, ' '))); // Adaptação para sanitização no header
-          
-          if(looksNum){
-            const s = (d ?? '').toString().trim();
-            // Verifica se o valor formatado para exibição é um hífen de valor nulo
-            if(s==='' || s==='—' || s==='-') return '0';
-          }
-          return d;
-        }
-
-        if(window.jQuery && jQuery.fn && jQuery.fn.dataTable){
-             jQuery('#result-table').DataTable({
-               responsive: false, // Desabilitado para permitir rolagem horizontal controlada
-               paging:true, searching:true,
-               pageLength:25, lengthMenu:[10,25,50,100,500],
-               // Remove a função de recompute, pois as métricas são do backend
-               dom:'<"row mb-2"<"col-md-6"l><"col-md-6"f>>t<"row mt-2"<"col-md-6"i><"col-md-6"p>>', 
-               buttons: [
-                 {
-                   extend: 'csvHtml5',
-                   className: 'btn btn-outline-secondary',
-                   text: '<i class="bi bi-file-earmark-csv me-1"></i> CSV',
-                   // Usa o exportFormatter para tratar o 'zerosSwitch'
-                   exportOptions: { rows: ':visible', format: { body: (d,r,c,n)=> exportFormatter(d,c) }} 
-                 },
-                 {
-                   extend: 'excelHtml5',
-                   className: 'btn btn-outline-secondary',
-                   text: '<i class="bi bi-file-earmark-excel me-1"></i> Excel',
-                   // Usa o exportFormatter para tratar o 'zerosSwitch'
-                   exportOptions: { rows: ':visible', format: { body: (d,r,c,n)=> exportFormatter(d,c) }} 
-                 },
-                 {
-                   extend: 'copyHtml5',
-                   className: 'btn btn-outline-secondary',
-                   text: '<i class="bi bi-clipboard-check me-1"></i> Copiar',
-                   exportOptions: { rows: ':visible' }
-                 }
-               ],
-               language: {
-                 url: 'https://cdn.datatables.net/plug-ins/2.0.7/i18n/pt-BR.json'
-               }
-             });
-
-             // Mover botões para a toolbar criada
-             jQuery('.toolbar').html(jQuery('#result-table').DataTable().buttons().container());
-        }
-    }
+  showBtn?.addEventListener('click', toMap);
+  backBtn?.addEventListener('click', toTable);
 });
 </script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-polylinedecorator@1.7.0/dist/leaflet.polylineDecorator.min.js"></script>
+<script src="{{ url_for('static', filename='js/kpi_map.js') }}?v=15"></script>
 {% endblock %}

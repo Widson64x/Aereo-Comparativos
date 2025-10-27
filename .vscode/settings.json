@@ -3,5 +3,51 @@
         "Db"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "sqltools.connections": [
+        {
+            "connectionTimeout": 15,
+            "mssqlOptions": {
+                "appName": "SQLTools",
+                "useUTC": true,
+                "encrypt": true,
+                "trustServerCertificate": false
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "172.16.200.3",
+            "driver": "MSSQL",
+            "name": "SQL SERVER (PROD.)",
+            "group": "SQL SERVER",
+            "database": "luftinforma",
+            "username": "user.services",
+            "password": "Adminluft#098ser",
+            "connectString": "Server=172.16.200.3,1433;Database=intec;User Id=user.services;Password=Adminluft#098ser;"
+        },
+        {
+            "connectionTimeout": 15,
+            "mssqlOptions": {
+                "appName": "SQLTools",
+                "useUTC": true,
+                "encrypt": true,
+                "trustServerCertificate": false
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "MSSQL",
+            "name": "SQL SERVER (HOMOLOG.)",
+            "group": "SQL SERVER",
+            "connectString": "Server=172.16.200.113,1433;Database=intec;User Id=user.services;Password=Adminluft#098ser;"
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "driver": "PostgreSQL",
+            "name": "LuftDocs",
+            "group": "Postgrees",
+            "connectString": "postgresql+psycopg://docs:Luft%40123@transfersql.luftfarma.com.br:5432/luftdocs"
+        }
+    ]
 }
