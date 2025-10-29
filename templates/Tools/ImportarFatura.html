@@ -97,6 +97,38 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+  // --- kill auto-submit para forms marcados ---
+  (function autoSubmitGuard(){
+    document.querySelectorAll('form[data-no-auto-submit]').forEach(form=>{
+      const stop = e => {
+        if (e.target && e.target.matches('input[type="file"]')) {
+          e.stopImmediatePropagation(); e.stopPropagation();
+        }
+      };
+      form.addEventListener('change', stop, true);
+      form.addEventListener('input',  stop, true);
+      form.addEventListener('drop',   stop, true);
+
+      const nativeSubmit = form.submit.bind(form);
+      form.submit = function(...args){
+        if (!this.__allowManualSubmit) return false;
+        return nativeSubmit(...args);
+      };
+      if (form.requestSubmit) {
+        const nativeReq = form.requestSubmit.bind(form);
+        form.requestSubmit = function(...args){
+          if (!this.__allowManualSubmit) return false;
+          return nativeReq(...args);
+        };
+      }
+      form.addEventListener('click', e=>{
+        const btn = e.target.closest('button[type="submit"], input[type="submit"]');
+        if (btn) { form.__allowManualSubmit = true; setTimeout(()=> form.__allowManualSubmit = false, 0); }
+      }, true);
+    });
+  })();
+  
   // --- Lógica para alternar entre formulário NOVO e EXISTENTE ---
   const optionNew = document.getElementById('option-new-pdf');
   const optionExisting = document.getElementById('option-existing-pdf');

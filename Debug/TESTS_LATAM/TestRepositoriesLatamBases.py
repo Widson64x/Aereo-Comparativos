@@ -1,63 +1,110 @@
-# C:\Programs\Aéreo-Comparativos\Debug\test.py
+# C:\Programs\Aéreo-Comparativos\Debug\TESTS_LATAM\TestRepositoriesLatamBases.py
 
 import os
 import sys
+import glob
 import pandas as pd
-import re
 from datetime import datetime
 
-# Adiciona o diretório raiz do projeto ao sys.path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(project_root)
+# --- Config Pandas ---
+pd.set_option('display.max_columns', 100)
+pd.set_option('display.width', 220)
+pd.set_option('display.precision', 2)
 
-# Importa a classe
-from Services.Latam.FormatadorTabelaLatam import FormatadorTabelaLatam
-from Config import Appconfig
+# --- Raiz do projeto: sobe duas pastas (Debug/TESTS_LATAM -> Debug -> RAIZ) ---
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-# --- CONFIGURAÇÃO DE EXIBIÇÃO DO PANDAS PARA O TERMINAL ---
-pd.set_option('display.max_columns', 50)
-pd.set_option('display.width', 200)
-pd.set_option('display.precision', 2) # Isso vai formatar 26.59
+# Import agora funciona
+from Repositories.Repositorio_TabelasFretesLatam import ProcessarTabelaLatam
 
-# Caminho para o arquivo Excel de entrada
-caminho_do_arquivo = os.path.join(project_root, "Debug/Archives/LATAM/Cópia de ACORDO LUFT CNPJ 52134798001563.xlsx")
+# --- Paths base ---
+LATAM_DIR = os.path.join(PROJECT_ROOT, "Debug", "Archives", "LATAM", "ACORDO")
+OUTPUT_DIR = os.path.join(LATAM_DIR)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-print(f"Iniciando o processamento do arquivo: {caminho_do_arquivo}\n")
+def escolher_arquivo_latam() -> str:
+    """
+    Prioriza arquivos cujo nome contenha 'ACORDO'. Se não houver, pega o XLS/XLSX mais recente.
+    """
+    candidatos = sorted(
+        glob.glob(os.path.join(LATAM_DIR, "*ACORDO*.xls*")),
+        key=os.path.getmtime,
+        reverse=True,
+    )
+    if candidatos:
+        return candidatos[0]
 
-try:
-    # 1. Instancia o formatador
-    # --- ALTERAÇÃO AQUI ---
-    # Passamos o 'project_root' para o Appconfig
-    formatador = FormatadorTabelaLatam(Appconfig(project_root))
-    # --- FIM DA ALTERAÇÃO ---
-    
-    df_formatado = formatador.formatar_tabela(caminho_do_arquivo)
-    
-    print(f"Total de {len(df_formatado)} linhas formatadas.")
-    print("Amostra das 5 primeiras linhas:")
-    
-    # --- ALTERAÇÃO AQUI ---
-    # Usamos to_string(index=False) para remover o índice da impressão
-    print(df_formatado.head().to_string(index=False))
-    # --- FIM DA ALTERAÇÃO ---
+    todos = sorted(
+        glob.glob(os.path.join(LATAM_DIR, "*.xls*")),
+        key=os.path.getmtime,
+        reverse=True,
+    )
+    if not todos:
+        raise FileNotFoundError(f"Nenhum arquivo .xls/.xlsx em {LATAM_DIR}")
+    return todos[0]
 
-    # --- NOVO TRECHO PARA GERAR O EXCEL ---
-    
-    # 1. Define o caminho e o nome do arquivo de saída
-    # --- GERAÇÃO DO ARQUIVO EXCEL DE DEBUG ---
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_filename = f'debug_servicos_bases_COMPLETO_{timestamp}.xlsx'
-    caminho_saida = os.path.join(project_root, 'Debug', 'Archives', 'LATAM', output_filename)
-    
-    # 2. Salva o DataFrame completo no arquivo Excel
-    #    index=False evita que o índice do pandas (0, 1, 2...) seja salvo
-    df_formatado.to_excel(caminho_saida, index=False)
-    
-    # 3. Imprime uma mensagem de confirmação
-    print(f"\nArquivo Excel gerado com sucesso em:")
-    print(caminho_saida)
-    
-    # --- FIM DO NOVO TRECHO ---
+def exportar_excel(df: pd.DataFrame, caminho: str, aba: str = "Servicos_Base") -> None:
+    with pd.ExcelWriter(caminho, engine="xlsxwriter") as writer:
+        df.to_excel(writer, sheet_name=aba, index=False)
 
-except Exception as e:
-    print(f"Erro durante o processamento: {e}")
+        ws = writer.sheets[aba]
+        # Autoajuste de largura de coluna
+        for i, col in enumerate(df.columns):
+            try:
+                col_len = max(df[col].astype(str).map(len).max(), len(col))
+            except Exception:
+                col_len = len(col)
+            ws.set_column(i, i, min(col_len + 2, 60))
+
+        # Congela cabeçalho
+        ws.freeze_panes(1, 0)
+
+def main():
+    try:
+        arquivo = escolher_arquivo_latam()
+        print(f"\nIniciando processamento de 'Serviços Base' em: {arquivo}")
+
+        proc = ProcessarTabelaLatam(arquivo)
+        df_bases = proc.processar_servicos_bases()
+
+        print("\n--- ANÁLISE DO DATAFRAME: SERVIÇOS BASE ---")
+        print(f"Linhas: {len(df_bases)}")
+        if not df_bases.empty:
+            print("\nAmostra (top 10):")
+            cols_show = [c for c in [
+                "Tipo_Servico_Sigla", "Tipo_Servico",
+                "Origem", "Destino",
+                "Frete_Minimo", "Valor_Tarifa",
+                "Data_Efetivacao_Tarifa"
+            ] if c in df_bases.columns]
+            print(df_bases[cols_show].head(10))
+        else:
+            print("DataFrame vazio.")
+
+        # Ordena colunas para o Excel se existirem
+        ordem = [
+            "Tipo_Servico_Sigla", "Tipo_Servico",
+            "Origem", "Destino",
+            "Frete_Minimo", "Valor_Tarifa",
+            "Data_Efetivacao_Tarifa"
+        ]
+        cols_export = [c for c in ordem if c in df_bases.columns] + \
+                      [c for c in df_bases.columns if c not in ordem]
+
+        df_export = df_bases[cols_export].copy()
+
+        # Exporta
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        out_xlsx = os.path.join(OUTPUT_DIR, f"debug_servicos_base_{ts}.xlsx")
+        exportar_excel(df_export, out_xlsx, aba="Servicos_Base")
+
+        print(f"\n✅ Arquivo gerado: {out_xlsx}\n")
+
+    except (FileNotFoundError, ValueError, IOError) as e:
+        print("\nERRO no processamento de 'Serviços Base'.")
+        print(f"Detalhes: {e}")
+
+if __name__ == "__main__":
+    main()

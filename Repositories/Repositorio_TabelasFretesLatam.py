@@ -199,3 +199,109 @@ class ProcessarTabelaLatam:
             print("------------------------------------------------------\n")
 
             return df_final.reset_index(drop=True)
+
+
+    # <-- NOVO: Método estático adicionado -->
+    @staticmethod
+    def processar_tabelas_padrao(pasta_padrao: str | Path | None = None) -> pd.DataFrame:
+        """
+        Lê todos os .xlsx/.xls da pasta PADRAO e consolida em DF_PADRAO.
+        Mapeia colunas:
+        'SERVIÇO' -> Tipo_Servico / Tipo_Servico_Sigla
+        'ORIGEM'  -> Origem
+        'DESTINO' -> Destino
+        'MÍNIMA'  -> Frete_Minimo
+        'PÚBLICO' -> Valor_Tarifa
+        Retorna:
+        pd.DataFrame com colunas:
+        ['Tipo_Servico_Sigla','Tipo_Servico','Origem','Destino','Frete_Minimo','Valor_Tarifa','Fonte_Arquivo']
+        """
+        import re
+        import numpy as np
+        import os
+
+        default_dir = Path(__file__).resolve().parents[1] / "Data" / "Tabelas" / "LATAM" / "PADRAO"
+        env_dir = os.getenv("LATAM_TABLES_DIR")
+        pasta = Path(pasta_padrao) if pasta_padrao else (Path(env_dir) if env_dir else default_dir)
+
+        if not pasta.exists():
+            print(f"Aviso: Pasta de tabelas padrão não encontrada: {pasta}")
+            # Retorna um DataFrame vazio com a estrutura esperada
+            return pd.DataFrame(columns=[
+                "Tipo_Servico_Sigla","Tipo_Servico","Origem","Destino","Frete_Minimo","Valor_Tarifa","Fonte_Arquivo"
+            ])
+
+        arquivos = sorted(list(pasta.glob("*.xlsx")) + list(pasta.glob("*.xls")) + list(pasta.glob("*.xlsm")))
+        if not arquivos:
+            print(f"Aviso: nenhum Excel em {pasta}")
+            return pd.DataFrame(columns=[
+                "Tipo_Servico_Sigla","Tipo_Servico","Origem","Destino","Frete_Minimo","Valor_Tarifa","Fonte_Arquivo"
+            ])
+
+        MAPA_SIGLAS_SERVICOS: Dict[str, str] = {"ST2MD": "ESTANDAR 2 MEDS"}
+
+        def parse_money(val) -> float | np.nan:  # type: ignore
+            if pd.isna(val): return np.nan
+            if isinstance(val, (int, float, np.number)): return float(val)
+            s = re.sub(r"[^\d,.\-]", "", str(val))
+            s = s.replace(".", "").replace(",", ".") if ("," in s and "." in s) else s.replace(",", ".")
+            try: return float(s)
+            except: return np.nan
+
+        def pick_col(cols, patterns: list[str]) -> str | None:
+            for pat in patterns:
+                for c in cols:
+                    if re.search(pat, str(c), flags=re.IGNORECASE):
+                        return c
+            return None
+
+        dfs: list[pd.DataFrame] = []
+        for arq in arquivos:
+            try:
+                xls = pd.ExcelFile(arq)
+                sh = xls.sheet_names[0]
+                df_raw = pd.read_excel(xls, sheet_name=sh, header=0)
+            except Exception as e:
+                print(f"Aviso: falha em '{arq.name}': {e}")
+                continue
+
+            df_raw = df_raw.dropna(how="all").dropna(axis=1, how="all")
+            cols = list(df_raw.columns)
+
+            col_serv = pick_col(cols, [r"^servi[cç]o$", r"^c[oó]digo do produto$"])
+            col_org  = pick_col(cols, [r"^origem$"])
+            col_dst  = pick_col(cols, [r"^destino$"])
+            col_min  = pick_col(cols, [r"^(m[ií]nima|min(\.?| )charge)$"])
+            col_pub  = pick_col(cols, [r"^(p[úu]blico|0\+|tarifa|valor(\s*|_)*tarifa)$"])
+
+            faltantes = [n for n, c in {
+                "SERVIÇO": col_serv, "ORIGEM": col_org, "DESTINO": col_dst, "MÍNIMA": col_min, "PÚBLICO": col_pub
+            }.items() if c is None]
+            if faltantes:
+                print(f"Aviso: colunas faltando em '{arq.name}': {', '.join(faltantes)}")
+                continue
+
+            df = pd.DataFrame({
+                "Tipo_Servico_Sigla": df_raw[col_serv].astype(str).str.strip(),
+                "Origem": df_raw[col_org].astype(str).str.strip().apply(std_text),
+                "Destino": df_raw[col_dst].astype(str).str.strip().apply(std_text),
+                "Frete_Minimo": df_raw[col_min].apply(parse_money),
+                "Valor_Tarifa": df_raw[col_pub].apply(parse_money),
+            })
+            df["Tipo_Servico"] = df["Tipo_Servico_Sigla"].map(MAPA_SIGLAS_SERVICOS).fillna(df["Tipo_Servico_Sigla"])
+            df["Fonte_Arquivo"] = arq.name
+            df.replace({"Origem": {"NAN": np.nan}, "Destino": {"NAN": np.nan}}, inplace=True)
+            df = df.dropna(subset=["Origem", "Destino", "Valor_Tarifa"])
+            df = df[["Tipo_Servico_Sigla","Tipo_Servico","Origem","Destino","Frete_Minimo","Valor_Tarifa","Fonte_Arquivo"]]
+            print(f"[OK] {arq.name}: {len(df)} linhas válidas")
+            dfs.append(df)
+
+        if not dfs:
+            print("Aviso: nenhum DataFrame válido gerado das tabelas padrão.")
+            return pd.DataFrame(columns=[
+                "Tipo_Servico_Sigla","Tipo_Servico","Origem","Destino","Frete_Minimo","Valor_Tarifa","Fonte_Arquivo"
+            ])
+
+        DF_PADRAO = pd.concat(dfs, ignore_index=True)
+        print(f"Consolidação pronta: {len(DF_PADRAO)} linhas em DF_PADRAO | Pasta: {pasta}")
+        return DF_PADRAO

@@ -46,7 +46,7 @@
 
   <section class="card upload-section" data-aos="fade-up">
     <div class="card-body p-4">
-      <form id="upload-form" method="post" enctype="multipart/form-data" class="row g-3 align-items-center">
+      <form id="upload-form" method="post" enctype="multipart/form-data" class="row g-3 align-items-center" data-no-auto-submit>
         <div class="col-lg-6">
           <label for="acordos_file_input" class="dropzone-area">
             <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
@@ -294,6 +294,38 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+  // --- kill auto-submit para forms marcados ---
+  (function autoSubmitGuard(){
+    document.querySelectorAll('form[data-no-auto-submit]').forEach(form=>{
+      const stop = e => {
+        if (e.target && e.target.matches('input[type="file"]')) {
+          e.stopImmediatePropagation(); e.stopPropagation(); /* bloqueia handlers globais */
+        }
+      };
+      form.addEventListener('change', stop, true);
+      form.addEventListener('input',  stop, true);
+      form.addEventListener('drop',   stop, true);
+
+      const nativeSubmit = form.submit.bind(form);
+      form.submit = function(...args){
+        if (!this.__allowManualSubmit) return false;
+        return nativeSubmit(...args);
+      };
+      if (form.requestSubmit) {
+        const nativeReq = form.requestSubmit.bind(form);
+        form.requestSubmit = function(...args){
+          if (!this.__allowManualSubmit) return false;
+          return nativeReq(...args);
+        };
+      }
+      form.addEventListener('click', e=>{
+        const btn = e.target.closest('button[type="submit"], input[type="submit"]');
+        if (btn) { form.__allowManualSubmit = true; setTimeout(()=> form.__allowManualSubmit = false, 0); }
+      }, true);
+    });
+  })();
+  
   // tooltips
   const tEls=[].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   tEls.forEach(el=>new bootstrap.Tooltip(el,{container:'body'}));
